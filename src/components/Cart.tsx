@@ -30,10 +30,10 @@ export function Cart({ isOpen, onClose, items, onUpdateQuantity, onRemove, onChe
   return (
     <>
       <div 
-        className="fixed inset-0 bg-black/50 z-50 transition-opacity"
+        className="fixed inset-0 bg-black/50 z-[10000] transition-opacity"
         onClick={onClose}
       />
-      <div className="fixed inset-y-0 right-0 w-full md:w-[400px] bg-white shadow-2xl z-50 flex flex-col transform transition-transform duration-300">
+      <div className="fixed inset-y-0 right-0 w-full md:w-[400px] bg-white shadow-2xl z-[10001] flex flex-col transform transition-transform duration-300">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-xl font-bold flex items-center gap-2">
             <ShoppingBag className="w-5 h-5" />
@@ -112,7 +112,7 @@ export function Cart({ isOpen, onClose, items, onUpdateQuantity, onRemove, onChe
         </div>
 
         {items.length > 0 && (
-          <div className="border-t border-gray-200 p-6 bg-gray-50">
+          <div className="border-t border-gray-200 p-6 bg-gray-50 pb-10 md:pb-6">
             <div className="flex justify-between items-center mb-6">
               <span className="text-gray-600 font-medium">Subtotal</span>
               <span className="text-2xl font-bold">S/ {total.toFixed(2)}</span>

@@ -292,7 +292,7 @@ export default function App() {
         </button>
       </div>
 
-      <SolChat onNavigate={handleNavigate} />
+      {!isCartOpen && <SolChat onNavigate={handleNavigate} />}
     </div>
   );
 }
