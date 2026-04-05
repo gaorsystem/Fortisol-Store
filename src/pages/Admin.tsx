@@ -1,0 +1,1140 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  Package, 
+  Layout, 
+  Tag, 
+  ShoppingCart, 
+  Plus, 
+  Edit2, 
+  Trash2, 
+  Save, 
+  X, 
+  ChevronRight,
+  Search,
+  Filter,
+  CheckCircle,
+  Clock,
+  Truck,
+  XCircle,
+  AlertCircle,
+  Upload,
+  Loader2,
+  Lock,
+  LogIn,
+  CreditCard,
+  FileText,
+  User as UserIcon,
+  Download,
+  Settings as SettingsIcon
+} from 'lucide-react';
+import { supabase } from '../lib/supabase';
+
+type Tab = 'products' | 'slides' | 'offers' | 'orders' | 'settings';
+
+export function Admin() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState(false);
+  const [activeTab, setActiveTab] = useState<Tab>('products');
+  const [loading, setLoading] = useState(false);
+  const [items, setItems] = useState<any[]>([]);
+  const [settings, setSettings] = useState<any>(null);
+  const [editingItem, setEditingItem] = useState<any | null>(null);
+  const [isAdding, setIsAdding] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallBtn, setShowInstallBtn] = useState(false);
+
+  useEffect(() => {
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallBtn(true);
+    });
+
+    window.addEventListener('appinstalled', () => {
+      setShowInstallBtn(false);
+      setDeferredPrompt(null);
+    });
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+      setShowInstallBtn(false);
+    }
+  };
+
+  // Fetch data based on active tab
+  const fetchData = async () => {
+    setLoading(true);
+    
+    if (activeTab === 'settings') {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('*')
+        .eq('id', 1)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching settings:', error);
+      } else {
+        setSettings(data || {
+          id: 1,
+          whatsapp_number: '51976791234',
+          facebook_url: '',
+          instagram_url: '',
+          tiktok_url: '',
+          logo_url: '',
+          footer_text: 'Fortisol Perú - Calidad y Confianza'
+        });
+      }
+      setLoading(false);
+      return;
+    }
+
+    let table = '';
+    switch (activeTab) {
+      case 'products': table = 'products'; break;
+      case 'slides': table = 'slides'; break;
+      case 'offers': table = 'offers'; break;
+      case 'orders': table = 'orders'; break;
+    }
+
+    const { data, error } = await supabase
+      .from(table)
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error(`Error fetching ${table}:`, error);
+    } else {
+      setItems(data || []);
+    }
+    setLoading(false);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `${activeTab}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('fortisol-assets')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('fortisol-assets')
+        .getPublicUrl(filePath);
+
+      setEditingItem({ ...editingItem, [activeTab === 'products' ? 'image_url' : 'image_url']: publicUrl });
+    } catch (error: any) {
+      alert('Error al subir imagen: ' + error.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [activeTab]);
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('¿Estás seguro de eliminar este elemento?')) return;
+
+    let table = '';
+    switch (activeTab) {
+      case 'products': table = 'products'; break;
+      case 'slides': table = 'slides'; break;
+      case 'offers': table = 'offers'; break;
+      case 'orders': table = 'orders'; break;
+    }
+
+    const { error } = await supabase
+      .from(table)
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      alert('Error al eliminar: ' + error.message);
+    } else {
+      fetchData();
+    }
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    if (activeTab === 'settings') {
+      const { error } = await supabase
+        .from('settings')
+        .upsert(settings);
+
+      if (error) {
+        alert('Error al guardar configuración: ' + error.message);
+      } else {
+        alert('Configuración guardada correctamente');
+        fetchData();
+      }
+      setLoading(false);
+      return;
+    }
+
+    let table = '';
+    switch (activeTab) {
+      case 'products': table = 'products'; break;
+      case 'slides': table = 'slides'; break;
+      case 'offers': table = 'offers'; break;
+      case 'orders': table = 'orders'; break;
+    }
+
+    const itemToSave = { ...editingItem };
+    if (activeTab === 'products') {
+      itemToSave.price = parseFloat(itemToSave.price as any) || 0;
+    }
+
+    const { error } = await supabase
+      .from(table)
+      .upsert(itemToSave);
+
+    if (error) {
+      alert('Error al guardar: ' + error.message);
+    } else {
+      setEditingItem(null);
+      setIsAdding(false);
+      fetchData();
+    }
+    setLoading(false);
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'pending': return <Clock className="w-4 h-4 text-yellow-500" />;
+      case 'paid': return <CheckCircle className="w-4 h-4 text-blue-500" />;
+      case 'shipped': return <Truck className="w-4 h-4 text-purple-500" />;
+      case 'delivered': return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case 'cancelled': return <XCircle className="w-4 h-4 text-red-500" />;
+      default: return <AlertCircle className="w-4 h-4 text-gray-500" />;
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'pending': return 'Pendiente';
+      case 'paid': return 'Pagado';
+      case 'shipped': return 'Enviado';
+      case 'delivered': return 'Entregado';
+      case 'cancelled': return 'Cancelado';
+      default: return status;
+    }
+  };
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Simple password protection for the portal
+    if (password === 'fortisol2024') {
+      setIsAuthenticated(true);
+      setLoginError(false);
+    } else {
+      setLoginError(true);
+    }
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 font-sans">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-yellow-400 rounded-2xl border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] mb-4">
+              <Lock className="w-8 h-8 text-black" />
+            </div>
+            <h1 className="text-2xl font-black uppercase tracking-tighter text-black">Portal Administrativo</h1>
+            <p className="text-gray-500 text-sm mt-1 font-medium">Fortisol Perú - Acceso Restringido</p>
+          </div>
+
+          <div className="bg-white rounded-3xl border-2 border-black p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+            <form onSubmit={handleLogin} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[11px] font-black uppercase tracking-widest text-gray-400 ml-1">Contraseña de Acceso</label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input 
+                    type="password" 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className={`w-full pl-12 pr-4 py-4 rounded-2xl border-2 outline-none transition-all font-bold ${loginError ? 'border-red-500 bg-red-50' : 'border-gray-100 focus:border-black bg-gray-50'}`}
+                  />
+                </div>
+                {loginError && <p className="text-red-500 text-[10px] font-bold uppercase ml-1">Contraseña incorrecta</p>}
+              </div>
+
+              <button 
+                type="submit"
+                className="w-full bg-black text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-gray-800 transition-all flex items-center justify-center gap-2 shadow-lg active:scale-[0.98]"
+              >
+                <LogIn className="w-5 h-5" />
+                Entrar al Sistema
+              </button>
+            </form>
+          </div>
+          
+          <p className="text-center mt-8 text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+            &copy; {new Date().getFullYear()} Fortisol Perú • Seguridad de Datos
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 pb-20 md:pb-10 font-sans text-[13px]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-black text-black tracking-tight uppercase">Panel Administrativo</h1>
+            <p className="text-gray-500 text-xs md:text-sm mt-1">Fortisol Perú • Gestión de Contenidos</p>
+          </div>
+          <div className="flex items-center gap-3 w-full md:w-auto">
+            {showInstallBtn && (
+              <button 
+                onClick={handleInstallClick}
+                className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-yellow-400 text-black px-6 py-4 md:py-3 rounded-2xl md:rounded-xl font-black uppercase tracking-widest hover:bg-yellow-500 transition-all shadow-lg active:scale-95"
+              >
+                <Download className="w-5 h-5" />
+                Instalar App
+              </button>
+            )}
+            <button 
+              onClick={() => {
+                const defaultItem = activeTab === 'products' ? {
+                  name: '',
+                  price: 0,
+                  description: '',
+                  category: 'General',
+                  tagline: '',
+                  presentation: '',
+                  benefits: [],
+                  variants: [
+                    { name: 'Unidad', price: 0 },
+                    { name: 'Pack x2', price: 0 }
+                  ]
+                } : {};
+                setEditingItem(defaultItem);
+                setIsAdding(true);
+              }}
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-black text-white px-6 py-4 md:py-3 rounded-2xl md:rounded-xl font-bold hover:bg-gray-800 transition-all shadow-lg hover:shadow-xl active:scale-95"
+            >
+              <Plus className="w-5 h-5" />
+              Nuevo {activeTab === 'products' ? 'Producto' : activeTab === 'slides' ? 'Slide' : activeTab === 'offers' ? 'Oferta' : 'Pedido'}
+            </button>
+          </div>
+        </div>
+
+        {/* Desktop Tabs */}
+        <div className="hidden md:flex overflow-x-auto gap-2 mb-8 pb-2 scrollbar-hide">
+          <button 
+            onClick={() => setActiveTab('products')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'products' ? 'bg-yellow-400 text-black shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+          >
+            <Package className="w-5 h-5" />
+            Productos
+          </button>
+          <button 
+            onClick={() => setActiveTab('slides')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'slides' ? 'bg-yellow-400 text-black shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+          >
+            <Layout className="w-5 h-5" />
+            Slider
+          </button>
+          <button 
+            onClick={() => setActiveTab('offers')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'offers' ? 'bg-yellow-400 text-black shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+          >
+            <Tag className="w-5 h-5" />
+            Ofertas
+          </button>
+          <button 
+            onClick={() => setActiveTab('orders')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'orders' ? 'bg-yellow-400 text-black shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+          >
+            <ShoppingCart className="w-5 h-5" />
+            Pedidos
+          </button>
+          <button 
+            onClick={() => setActiveTab('settings')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'settings' ? 'bg-yellow-400 text-black shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+          >
+            <SettingsIcon className="w-5 h-5" />
+            Configuración
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="bg-white rounded-3xl md:rounded-2xl border-2 border-black overflow-hidden shadow-xl">
+          {loading && ((activeTab !== 'settings' && !items.length) || (activeTab === 'settings' && !settings)) ? (
+            <div className="p-20 text-center">
+              <div className="animate-spin w-10 h-10 border-4 border-yellow-400 border-t-black rounded-full mx-auto mb-4"></div>
+              <p className="text-gray-500 font-bold">Cargando datos...</p>
+            </div>
+          ) : activeTab === 'settings' ? (
+            <div className="p-6 md:p-10">
+              <div className="max-w-2xl mx-auto">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="p-3 bg-yellow-400 rounded-2xl border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                    <SettingsIcon className="w-6 h-6 text-black" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black uppercase tracking-tight">Configuración General</h2>
+                    <p className="text-xs text-gray-500 font-medium">Gestiona los enlaces y la identidad de tu tienda</p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleSave} className="space-y-8">
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[11px] font-black uppercase tracking-widest text-gray-400 ml-1">Número de WhatsApp</label>
+                        <div className="relative">
+                          <div className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400">+</div>
+                          <input 
+                            type="text" 
+                            value={settings?.whatsapp_number || ''}
+                            onChange={e => setSettings({...settings, whatsapp_number: e.target.value})}
+                            placeholder="51900000000"
+                            className="w-full pl-8 pr-4 py-4 rounded-2xl border-2 border-gray-100 focus:border-black outline-none transition-all font-bold bg-gray-50"
+                          />
+                        </div>
+                        <p className="text-[10px] text-gray-400 ml-1 italic">Incluye código de país (Ej: 51 para Perú)</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[11px] font-black uppercase tracking-widest text-gray-400 ml-1">Logo de la Tienda</label>
+                        <div className="flex items-center gap-4">
+                          {settings?.logo_url ? (
+                            <img src={settings.logo_url} alt="Logo" className="w-14 h-14 rounded-xl object-contain border-2 border-black p-1 bg-white" />
+                          ) : (
+                            <div className="w-14 h-14 rounded-xl bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center">
+                              <Upload className="w-6 h-6 text-gray-300" />
+                            </div>
+                          )}
+                          <label className="flex-1 cursor-pointer">
+                            <div className="bg-black text-white px-4 py-3 rounded-xl text-xs font-bold text-center hover:bg-gray-800 transition-all">
+                              {uploading ? 'Subiendo...' : 'Cambiar Logo'}
+                            </div>
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              className="hidden" 
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                setUploading(true);
+                                try {
+                                  const fileExt = file.name.split('.').pop();
+                                  const fileName = `logo-${Date.now()}.${fileExt}`;
+                                  const { error: uploadError } = await supabase.storage
+                                    .from('fortisol-assets')
+                                    .upload(`settings/${fileName}`, file);
+                                  if (uploadError) throw uploadError;
+                                  const { data: { publicUrl } } = supabase.storage
+                                    .from('fortisol-assets')
+                                    .getPublicUrl(`settings/${fileName}`);
+                                  setSettings({...settings, logo_url: publicUrl});
+                                } catch (err: any) {
+                                  alert('Error: ' + err.message);
+                                } finally {
+                                  setUploading(false);
+                                }
+                              }} 
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <h3 className="text-xs font-black uppercase tracking-widest text-black border-b-2 border-black pb-2">Redes Sociales</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Facebook</label>
+                          <input 
+                            type="url" 
+                            value={settings?.facebook_url || ''}
+                            onChange={e => setSettings({...settings, facebook_url: e.target.value})}
+                            placeholder="https://facebook.com/..."
+                            className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-black outline-none transition-all text-xs font-bold bg-gray-50"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Instagram</label>
+                          <input 
+                            type="url" 
+                            value={settings?.instagram_url || ''}
+                            onChange={e => setSettings({...settings, instagram_url: e.target.value})}
+                            placeholder="https://instagram.com/..."
+                            className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-black outline-none transition-all text-xs font-bold bg-gray-50"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">TikTok</label>
+                          <input 
+                            type="url" 
+                            value={settings?.tiktok_url || ''}
+                            onChange={e => setSettings({...settings, tiktok_url: e.target.value})}
+                            placeholder="https://tiktok.com/@..."
+                            className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-black outline-none transition-all text-xs font-bold bg-gray-50"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-black uppercase tracking-widest text-gray-400 ml-1">Texto del Footer</label>
+                      <textarea 
+                        value={settings?.footer_text || ''}
+                        onChange={e => setSettings({...settings, footer_text: e.target.value})}
+                        className="w-full px-4 py-4 rounded-2xl border-2 border-gray-100 focus:border-black outline-none transition-all font-bold bg-gray-50 h-24 resize-none"
+                        placeholder="Escribe el texto que aparecerá en el pie de página..."
+                      />
+                    </div>
+                  </div>
+
+                  <button 
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-yellow-400 text-black py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-yellow-500 transition-all shadow-[0_6px_0_0_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none border-2 border-black flex items-center justify-center gap-3"
+                  >
+                    {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Save className="w-6 h-6" />}
+                    Guardar Cambios
+                  </button>
+                </form>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 border-b-2 border-black">
+                      <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500">Info</th>
+                      {activeTab === 'products' && (
+                        <>
+                          <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500">Precio</th>
+                          <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500">Stock</th>
+                        </>
+                      )}
+                      {activeTab === 'orders' && (
+                        <>
+                          <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500">Cliente</th>
+                          <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500">Pago</th>
+                          <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500">Total</th>
+                          <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500">Estado</th>
+                        </>
+                      )}
+                      <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500 text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {items.map((item) => (
+                      <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-4">
+                            {(item.image_url || item.image) && (
+                              <img 
+                                src={item.image_url || item.image} 
+                                alt="" 
+                                className="w-12 h-12 rounded-lg object-cover border border-gray-200"
+                                referrerPolicy="no-referrer"
+                              />
+                            )}
+                            <div>
+                              <div className="font-bold text-black">{item.name || item.title || `#${item.order_number}`}</div>
+                              <div className="text-xs text-gray-500 truncate max-w-[200px]">{item.description || item.subtitle || item.customer_phone}</div>
+                            </div>
+                          </div>
+                        </td>
+                        {activeTab === 'products' && (
+                          <>
+                            <td className="px-6 py-4 font-black text-black">S/. {item.price}</td>
+                            <td className="px-6 py-4">
+                              <span className={`px-2 py-1 rounded-md text-xs font-bold ${item.stock > 10 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                {item.stock} unid.
+                              </span>
+                            </td>
+                          </>
+                        )}
+                        {activeTab === 'orders' && (
+                          <>
+                            <td className="px-6 py-4">
+                              <div className="text-sm font-bold">{item.customer_name}</div>
+                              <div className="text-xs text-gray-500">{item.customer_phone}</div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex flex-col">
+                                <span className="font-bold uppercase text-[11px] text-gray-700">{item.payment_method || 'No reg.'}</span>
+                                {item.admin_notes && <span className="text-[10px] text-gray-400 truncate max-w-[100px]">{item.admin_notes}</span>}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 font-black text-black">S/. {item.total}</td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-2">
+                                {getStatusIcon(item.status)}
+                                <span className="text-xs font-bold uppercase">{getStatusLabel(item.status)}</span>
+                              </div>
+                            </td>
+                          </>
+                        )}
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex justify-end gap-2">
+                            <button 
+                              onClick={() => setEditingItem(item)}
+                              className="p-2 text-gray-400 hover:text-black hover:bg-gray-100 rounded-lg transition-all"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button 
+                              onClick={() => handleDelete(item.id)}
+                              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="md:hidden divide-y divide-gray-100">
+                {items.map((item) => (
+                  <div key={item.id} className="p-4 space-y-4">
+                    <div className="flex items-start gap-4">
+                      {(item.image_url || item.image) && (
+                        <img 
+                          src={item.image_url || item.image} 
+                          alt="" 
+                          className="w-16 h-16 rounded-xl object-cover border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex-shrink-0"
+                          referrerPolicy="no-referrer"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-black text-black text-sm uppercase tracking-tight truncate">{item.name || item.title || `#${item.order_number}`}</div>
+                        <div className="text-[10px] text-gray-500 line-clamp-1 mb-1">{item.description || item.subtitle || item.customer_phone}</div>
+                        
+                        {activeTab === 'products' && (
+                          <div className="flex items-center gap-2">
+                            <span className="font-black text-black">S/. {item.price}</span>
+                            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${item.stock > 10 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                              Stock: {item.stock}
+                            </span>
+                          </div>
+                        )}
+
+                        {activeTab === 'orders' && (
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{item.customer_name}</span>
+                              <span className="font-black text-black">S/. {item.total}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {getStatusIcon(item.status)}
+                              <span className="text-[10px] font-black uppercase tracking-tighter">{getStatusLabel(item.status)}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => setEditingItem(item)}
+                        className="flex-1 flex items-center justify-center gap-2 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold text-xs active:scale-95 transition-all"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                        Editar
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(item.id)}
+                        className="flex-1 flex items-center justify-center gap-2 py-3 bg-red-50 text-red-600 rounded-xl font-bold text-xs active:scale-95 transition-all"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Mobile Bottom Navigation */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t-2 border-black z-[50] flex items-center justify-around px-2 py-3 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+        <button 
+          onClick={() => setActiveTab('products')}
+          className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'products' ? 'text-black scale-110' : 'text-gray-400'}`}
+        >
+          <div className={`p-2 rounded-xl ${activeTab === 'products' ? 'bg-yellow-400 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : ''}`}>
+            <Package className="w-5 h-5" />
+          </div>
+          <span className="text-[9px] font-black uppercase tracking-tighter">Productos</span>
+        </button>
+        <button 
+          onClick={() => setActiveTab('slides')}
+          className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'slides' ? 'text-black scale-110' : 'text-gray-400'}`}
+        >
+          <div className={`p-2 rounded-xl ${activeTab === 'slides' ? 'bg-yellow-400 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : ''}`}>
+            <Layout className="w-5 h-5" />
+          </div>
+          <span className="text-[9px] font-black uppercase tracking-tighter">Slider</span>
+        </button>
+        <button 
+          onClick={() => setActiveTab('offers')}
+          className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'offers' ? 'text-black scale-110' : 'text-gray-400'}`}
+        >
+          <div className={`p-2 rounded-xl ${activeTab === 'offers' ? 'bg-yellow-400 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : ''}`}>
+            <Tag className="w-5 h-5" />
+          </div>
+          <span className="text-[9px] font-black uppercase tracking-tighter">Ofertas</span>
+        </button>
+        <button 
+          onClick={() => setActiveTab('orders')}
+          className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'orders' ? 'text-black scale-110' : 'text-gray-400'}`}
+        >
+          <div className={`p-2 rounded-xl ${activeTab === 'orders' ? 'bg-yellow-400 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : ''}`}>
+            <ShoppingCart className="w-5 h-5" />
+          </div>
+          <span className="text-[9px] font-black uppercase tracking-tighter">Pedidos</span>
+        </button>
+        <button 
+          onClick={() => setActiveTab('settings')}
+          className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'settings' ? 'text-black scale-110' : 'text-gray-400'}`}
+        >
+          <div className={`p-2 rounded-xl ${activeTab === 'settings' ? 'bg-yellow-400 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : ''}`}>
+            <SettingsIcon className="w-5 h-5" />
+          </div>
+          <span className="text-[9px] font-black uppercase tracking-tighter">Ajustes</span>
+        </button>
+      </div>
+
+      {/* Edit Modal */}
+      {(editingItem || isAdding) && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000] flex items-center justify-center md:p-4">
+          <div className="bg-white md:rounded-3xl border-2 border-black w-full max-w-2xl h-full md:h-auto md:max-h-[90vh] overflow-y-auto shadow-2xl animate-in slide-in-from-bottom md:zoom-in-95 duration-300">
+            <div className="sticky top-0 z-10 p-6 border-b-2 border-black flex justify-between items-center bg-yellow-400">
+              <h2 className="text-xl font-black text-black uppercase tracking-tight">
+                {isAdding ? 'Nuevo' : 'Editar'} {activeTab === 'products' ? 'Producto' : activeTab === 'slides' ? 'Slide' : activeTab === 'offers' ? 'Oferta' : 'Pedido'}
+              </h2>
+              <button onClick={() => { setEditingItem(null); setIsAdding(false); }} className="p-2 hover:bg-black/10 rounded-full transition-all">
+                <X className="w-6 h-6 text-black" />
+              </button>
+            </div>
+            <form onSubmit={handleSave} className="p-6 space-y-4">
+              {activeTab === 'products' && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-black uppercase text-gray-500">Nombre</label>
+                      <input 
+                        type="text" 
+                        required
+                        value={editingItem?.name || ''} 
+                        onChange={e => setEditingItem({...editingItem, name: e.target.value})}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition-all font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-black uppercase text-gray-500">Precio Base (S/.)</label>
+                      <input 
+                        type="number" 
+                        required
+                        value={editingItem?.price || ''} 
+                        onChange={e => setEditingItem({...editingItem, price: parseFloat(e.target.value)})}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition-all font-bold"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-black uppercase text-gray-500">Eslogan (Tagline)</label>
+                    <input 
+                      type="text" 
+                      value={editingItem?.tagline || ''} 
+                      onChange={e => setEditingItem({...editingItem, tagline: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition-all font-bold"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-black uppercase text-gray-500">Descripción (Se respetarán los saltos de línea)</label>
+                    <textarea 
+                      value={editingItem?.description || ''} 
+                      onChange={e => setEditingItem({...editingItem, description: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition-all font-bold h-32"
+                      placeholder="Escribe la descripción aquí..."
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-black uppercase text-gray-500">Categoría</label>
+                      <input 
+                        type="text" 
+                        value={editingItem?.category || ''} 
+                        onChange={e => setEditingItem({...editingItem, category: e.target.value})}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition-all font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-black uppercase text-gray-500">Presentación</label>
+                      <input 
+                        type="text" 
+                        placeholder="Ej: Doypack de 30 sachets"
+                        value={editingItem?.presentation || ''} 
+                        onChange={e => setEditingItem({...editingItem, presentation: e.target.value})}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition-all font-bold"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-black uppercase text-gray-500">Beneficios (Uno por línea)</label>
+                    <textarea 
+                      value={Array.isArray(editingItem?.benefits) ? editingItem.benefits.join('\n') : ''} 
+                      onChange={e => setEditingItem({...editingItem, benefits: e.target.value.split('\n').filter(b => b.trim())})}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition-all font-bold h-24"
+                      placeholder="Beneficio 1&#10;Beneficio 2..."
+                    />
+                  </div>
+
+                  <div className="space-y-2 border-2 border-black/5 p-4 rounded-2xl bg-gray-50">
+                    <div className="flex justify-between items-center">
+                      <label className="text-xs font-black uppercase text-gray-500">Variantes / Opciones de Compra</label>
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          const currentVariants = Array.isArray(editingItem?.variants) ? editingItem.variants : [];
+                          setEditingItem({
+                            ...editingItem, 
+                            variants: [...currentVariants, { name: '', price: editingItem?.price || 0 }]
+                          });
+                        }}
+                        className="text-[10px] font-black uppercase bg-black text-white px-3 py-1 rounded-full hover:bg-gray-800 transition-all"
+                      >
+                        + Agregar Variante
+                      </button>
+                    </div>
+                    <div className="space-y-2">
+                      {(Array.isArray(editingItem?.variants) ? editingItem.variants : []).map((variant: any, idx: number) => (
+                        <div key={idx} className="flex gap-2 items-center bg-white p-2 rounded-xl border border-gray-200">
+                          <input 
+                            type="text" 
+                            placeholder="Nombre (Ej: Pack x2)"
+                            value={variant.name}
+                            onChange={e => {
+                              const newVariants = [...editingItem.variants];
+                              newVariants[idx].name = e.target.value;
+                              setEditingItem({...editingItem, variants: newVariants});
+                            }}
+                            className="flex-1 px-3 py-2 text-xs font-bold border-b border-gray-100 outline-none focus:border-black"
+                          />
+                          <input 
+                            type="number" 
+                            placeholder="Precio"
+                            value={variant.price}
+                            onChange={e => {
+                              const newVariants = [...editingItem.variants];
+                              newVariants[idx].price = parseFloat(e.target.value) || 0;
+                              setEditingItem({...editingItem, variants: newVariants});
+                            }}
+                            className="w-24 px-3 py-2 text-xs font-bold border-b border-gray-100 outline-none focus:border-black"
+                          />
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              const newVariants = editingItem.variants.filter((_: any, i: number) => i !== idx);
+                              setEditingItem({...editingItem, variants: newVariants});
+                            }}
+                            className="p-1 text-red-500 hover:bg-red-50 rounded-lg"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                      {(Array.isArray(editingItem?.variants) ? editingItem.variants : []).length === 0 && (
+                        <p className="text-[10px] text-gray-400 italic text-center py-2">No hay variantes configuradas. Se usará el precio base.</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-black uppercase text-gray-500">Imagen del Producto</label>
+                    <div className="flex items-center gap-4">
+                      {editingItem?.image_url && (
+                        <img 
+                          src={editingItem.image_url} 
+                          alt="Preview" 
+                          className="w-20 h-20 rounded-xl object-cover border-2 border-black"
+                          referrerPolicy="no-referrer"
+                        />
+                      )}
+                      <label className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-xl p-4 hover:border-black transition-all cursor-pointer bg-gray-50">
+                        {uploading ? (
+                          <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                        ) : (
+                          <>
+                            <Upload className="w-6 h-6 text-gray-400 mb-1" />
+                            <span className="text-[10px] font-bold uppercase text-gray-500">Subir Imagen</span>
+                          </>
+                        )}
+                        <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" disabled={uploading} />
+                      </label>
+                    </div>
+                    <input 
+                      type="text" 
+                      placeholder="O pega una URL externa"
+                      value={editingItem?.image_url || ''} 
+                      onChange={e => setEditingItem({...editingItem, image_url: e.target.value})}
+                      className="w-full mt-2 px-4 py-2 rounded-xl border-2 border-gray-100 focus:border-black outline-none transition-all text-xs font-bold"
+                    />
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'slides' && (
+                <>
+                  <div className="space-y-1">
+                    <label className="text-xs font-black uppercase text-gray-500">Título</label>
+                    <input 
+                      type="text" 
+                      placeholder="Ej: TÚ BIENESTAR ES NUESTRA PRIORIDAD"
+                      value={editingItem?.title || ''} 
+                      onChange={e => setEditingItem({...editingItem, title: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition-all font-bold"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-black uppercase text-gray-500">Subtítulo</label>
+                    <input 
+                      type="text" 
+                      placeholder="Ej: Imagina un cuerpo lleno de vitalidad..."
+                      value={editingItem?.subtitle || ''} 
+                      onChange={e => setEditingItem({...editingItem, subtitle: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition-all font-bold"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-black uppercase text-gray-500">Imagen del Slide</label>
+                    <div className="flex items-center gap-4">
+                      {editingItem?.image_url && (
+                        <img 
+                          src={editingItem.image_url} 
+                          alt="Preview" 
+                          className="w-20 h-20 rounded-xl object-cover border-2 border-black"
+                          referrerPolicy="no-referrer"
+                        />
+                      )}
+                      <label className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-xl p-4 hover:border-black transition-all cursor-pointer bg-gray-50">
+                        {uploading ? (
+                          <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                        ) : (
+                          <>
+                            <Upload className="w-6 h-6 text-gray-400 mb-1" />
+                            <span className="text-[10px] font-bold uppercase text-gray-500">Subir Imagen</span>
+                          </>
+                        )}
+                        <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" disabled={uploading} />
+                      </label>
+                    </div>
+                    <input 
+                      type="text" 
+                      placeholder="O pega una URL externa"
+                      value={editingItem?.image_url || ''} 
+                      onChange={e => setEditingItem({...editingItem, image_url: e.target.value})}
+                      className="w-full mt-2 px-4 py-2 rounded-xl border-2 border-gray-100 focus:border-black outline-none transition-all text-xs font-bold"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-black uppercase text-gray-500">Texto Botón</label>
+                      <input 
+                        type="text" 
+                        value={editingItem?.button_text || ''} 
+                        onChange={e => setEditingItem({...editingItem, button_text: e.target.value})}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition-all font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-black uppercase text-gray-500">Link Botón</label>
+                      <input 
+                        type="text" 
+                        value={editingItem?.button_link || ''} 
+                        onChange={e => setEditingItem({...editingItem, button_link: e.target.value})}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition-all font-bold"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'offers' && (
+                <>
+                  <div className="space-y-1">
+                    <label className="text-xs font-black uppercase text-gray-500">Título de Oferta</label>
+                    <input 
+                      type="text" 
+                      required
+                      value={editingItem?.title || ''} 
+                      onChange={e => setEditingItem({...editingItem, title: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition-all font-bold"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-black uppercase text-gray-500">Imagen de la Oferta</label>
+                    <div className="flex items-center gap-4">
+                      {editingItem?.image_url && (
+                        <img 
+                          src={editingItem.image_url} 
+                          alt="Preview" 
+                          className="w-20 h-20 rounded-xl object-cover border-2 border-black"
+                          referrerPolicy="no-referrer"
+                        />
+                      )}
+                      <label className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-xl p-4 hover:border-black transition-all cursor-pointer bg-gray-50">
+                        {uploading ? (
+                          <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                        ) : (
+                          <>
+                            <Upload className="w-6 h-6 text-gray-400 mb-1" />
+                            <span className="text-[10px] font-bold uppercase text-gray-500">Subir Imagen</span>
+                          </>
+                        )}
+                        <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" disabled={uploading} />
+                      </label>
+                    </div>
+                    <input 
+                      type="text" 
+                      placeholder="O pega una URL externa"
+                      value={editingItem?.image_url || ''} 
+                      onChange={e => setEditingItem({...editingItem, image_url: e.target.value})}
+                      className="w-full mt-2 px-4 py-2 rounded-xl border-2 border-gray-100 focus:border-black outline-none transition-all text-xs font-bold"
+                    />
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={editingItem?.is_active || false} 
+                        onChange={e => setEditingItem({...editingItem, is_active: e.target.checked})}
+                        className="w-5 h-5 accent-black"
+                      />
+                      <span className="text-sm font-bold">Activa</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={editingItem?.show_in_popup || false} 
+                        onChange={e => setEditingItem({...editingItem, show_in_popup: e.target.checked})}
+                        className="w-5 h-5 accent-black"
+                      />
+                      <span className="text-sm font-bold">Mostrar en Pop-up</span>
+                    </label>
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'orders' && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-black uppercase text-gray-500">Estado del Pedido</label>
+                      <select 
+                        value={editingItem?.status || 'pending'} 
+                        onChange={e => setEditingItem({...editingItem, status: e.target.value})}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition-all font-bold bg-white"
+                      >
+                        <option value="pending">Pendiente</option>
+                        <option value="paid">Pagado</option>
+                        <option value="shipped">Enviado</option>
+                        <option value="delivered">Entregado</option>
+                        <option value="cancelled">Cancelado</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-black uppercase text-gray-500">Método de Pago</label>
+                      <select 
+                        value={editingItem?.payment_method || ''} 
+                        onChange={e => setEditingItem({...editingItem, payment_method: e.target.value})}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition-all font-bold bg-white"
+                      >
+                        <option value="">Seleccionar</option>
+                        <option value="yape">Yape</option>
+                        <option value="plin">Plin</option>
+                        <option value="transferencia">Transferencia BCP/BBVA</option>
+                        <option value="efectivo">Efectivo (Contraentrega)</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-black uppercase text-gray-500">Notas Administrativas (Código Transacción, etc.)</label>
+                    <textarea 
+                      value={editingItem?.admin_notes || ''} 
+                      onChange={e => setEditingItem({...editingItem, admin_notes: e.target.value})}
+                      placeholder="Ej: Transacción #123456 - Pagado por Juan"
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition-all font-bold h-20"
+                    />
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200 space-y-2">
+                    <div className="text-xs font-black uppercase text-gray-400">Detalles del Cliente</div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <div className="text-[10px] text-gray-500 uppercase">Nombre</div>
+                        <div className="font-bold">{editingItem?.customer_name}</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-gray-500 uppercase">Teléfono</div>
+                        <div className="font-bold">{editingItem?.customer_phone}</div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-gray-500 uppercase">Dirección</div>
+                      <div className="font-bold">{editingItem?.customer_address}, {editingItem?.district}, {editingItem?.province}</div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <div className="pt-4 flex gap-3">
+                <button 
+                  type="button"
+                  onClick={() => { setEditingItem(null); setIsAdding(false); }}
+                  className="flex-1 py-4 rounded-2xl font-black uppercase tracking-widest text-gray-500 bg-gray-100 hover:bg-gray-200 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 py-4 rounded-2xl font-black uppercase tracking-widest text-black bg-yellow-400 hover:bg-yellow-500 transition-all shadow-lg hover:shadow-xl disabled:opacity-50"
+                >
+                  {loading ? 'Guardando...' : 'Guardar Cambios'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
