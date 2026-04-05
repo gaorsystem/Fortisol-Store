@@ -18,14 +18,21 @@ export function PromoModal({ offers }: PromoModalProps) {
     return () => clearTimeout(timer);
   }, [offers]);
 
-  if (!isOpen) return null;
-
-  const activeOffer = offers.length > 0 ? offers[0] : {
-    title: "15% DE DESCUENTO",
-    image_url: "https://images.unsplash.com/photo-1611078813354-150247071661?auto=format&fit=crop&q=80&w=800",
-    subtitle: "Obtén un descuento especial en tu primera compra de la línea de suplementos FORTISOL. Usa el código al finalizar tu pedido.",
+  const isUsingStatic = offers.length === 0;
+  const activeOffer = !isUsingStatic ? offers[0] : {
+    title: "BIENVENIDO A FORTISOL",
+    image_url: "https://images.unsplash.com/photo-1576091160550-2173bdb999ef?auto=format&fit=crop&q=80&w=800",
+    subtitle: "Obtén un 15% de descuento especial en tu primera compra de nuestra línea premium. Usa el código al finalizar tu pedido.",
     code: "FORTISOL15"
   };
+
+  useEffect(() => {
+    if (isUsingStatic && isOpen) {
+      console.warn('PromoModal: No se recibieron ofertas activas, mostrando oferta de demostración.');
+    }
+  }, [isUsingStatic, isOpen]);
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">

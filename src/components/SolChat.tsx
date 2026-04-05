@@ -283,7 +283,12 @@ export default function SolChat({ onNavigate }: SolChatProps) {
     setLoading(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error("GEMINI_API_KEY is missing. Please set it in your environment variables.");
+      }
+      
+      const ai = new GoogleGenAI({ apiKey });
       const model = "gemini-3-flash-preview";
       
       const chat = ai.chats.create({
@@ -300,12 +305,23 @@ export default function SolChat({ onNavigate }: SolChatProps) {
       setMessages((prev) => prev.filter((m) => m.text !== "__typing__"));
       const parts = reply.split("|||");
       await addSequentialMessages(parts);
-    } catch (error) {
-      console.error("Gemini Error:", error);
+    } catch (error: any) {
+      console.error("Gemini Error Details:", error);
       setLoading(false);
+      
+      let errorMessage = "Hubo un error de conexión. Intenta de nuevo. 😊";
+      
+      if (error.message?.includes("GEMINI_API_KEY")) {
+        errorMessage = "⚠️ Error de configuración: Falta la clave de API de Gemini. Por favor, asegúrate de configurarla en las variables de entorno de Vercel/GitHub.";
+      } else if (error.message?.includes("API key not valid")) {
+        errorMessage = "⚠️ La clave de API de Gemini no es válida. Por favor, revísala en tu configuración.";
+      } else if (error.message) {
+        errorMessage = `Hubo un problema con la conexión: ${error.message.substring(0, 100)}... 😊`;
+      }
+
       setMessages((prev) => [
         ...prev.filter((m) => m.text !== "__typing__"),
-        { role: "assistant", text: "Hubo un error de conexión. Intenta de nuevo. 😊" },
+        { role: "assistant", text: errorMessage },
       ]);
     }
   };

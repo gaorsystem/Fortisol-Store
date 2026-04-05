@@ -28,6 +28,7 @@ export default function App() {
   useEffect(() => {
     const fetchAllData = async () => {
       setLoading(true);
+      console.log('Iniciando carga de datos desde Supabase...');
       try {
         // Fetch Products
         const { data: productsData, error: productsError } = await supabase
@@ -35,17 +36,21 @@ export default function App() {
           .select('*')
           .order('created_at', { ascending: false });
 
-        if (productsError) throw productsError;
+        if (productsError) {
+          console.error('Error al cargar productos:', productsError);
+          throw productsError;
+        }
+        
+        console.log(`Productos cargados: ${productsData?.length || 0}`);
 
         // Map Supabase product to our Product interface
         const mappedProducts: Product[] = (productsData || []).map(p => {
+          // ... (rest of the mapping logic remains the same)
           const basePrice = parseFloat(p.price) || 0;
           const rawVariants = Array.isArray(p.variants) ? p.variants : [];
           
-          // Always start with the base price as "Unidad"
           let variants: ProductVariant[] = [{ name: "Unidad", price: basePrice }];
           
-          // Add other variants from the database, avoiding duplicates of "Unidad"
           rawVariants.forEach((v: any) => {
             const vName = v.name || 'Opción';
             if (vName.toLowerCase() !== 'unidad') {
@@ -71,25 +76,39 @@ export default function App() {
           };
         });
 
-        // If no products in DB, use static ones as fallback
         setProducts(mappedProducts.length > 0 ? mappedProducts : staticProducts);
+        if (mappedProducts.length === 0) {
+          console.warn('No se encontraron productos en la base de datos, usando datos estáticos.');
+        }
 
         // Fetch Slides
-        const { data: slidesData } = await supabase
+        const { data: slidesData, error: slidesError } = await supabase
           .from('slides')
           .select('*')
           .order('created_at', { ascending: false });
-        setSlides(slidesData || []);
+        
+        if (slidesError) {
+          console.error('Error al cargar slides:', slidesError);
+        } else {
+          console.log(`Slides cargados: ${slidesData?.length || 0}`);
+          setSlides(slidesData || []);
+        }
 
         // Fetch Offers
-        const { data: offersData } = await supabase
+        const { data: offersData, error: offersError } = await supabase
           .from('offers')
           .select('*')
           .eq('is_active', true);
-        setOffers(offersData || []);
+        
+        if (offersError) {
+          console.error('Error al cargar ofertas:', offersError);
+        } else {
+          console.log(`Ofertas activas cargadas: ${offersData?.length || 0}`);
+          setOffers(offersData || []);
+        }
 
       } catch (error) {
-        console.error('Error fetching data from Supabase:', error);
+        console.error('Error crítico al cargar datos:', error);
         setProducts(staticProducts);
       } finally {
         setLoading(false);

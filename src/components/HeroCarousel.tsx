@@ -4,23 +4,23 @@ import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 const staticSlides = [
   {
     id: 1,
-    title: "TÚ BIENESTAR ES NUESTRA PRIORIDAD",
-    subtitle: "Imagina un cuerpo lleno de vitalidad, articulaciones ágiles, y una energía que te impulsa a conquistar cada día.",
-    image: "https://images.unsplash.com/photo-1556040220-4096d522378d?auto=format&fit=crop&q=80&w=2000",
+    title: "BIENESTAR NATURAL PARA TU VIDA",
+    subtitle: "Descubre el poder de la naturaleza con nuestros suplementos premium diseñados para tu vitalidad diaria.",
+    image: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&q=80&w=2000",
     cta: "Ver Catálogo"
   },
   {
     id: 2,
-    title: "FLEXANIL ULTRA FORTE",
-    subtitle: "Restaura la movilidad articular, elimina la inflamación y permite la regeneración del cartílago.",
-    image: "https://images.unsplash.com/photo-1611078813354-150247071661?auto=format&fit=crop&q=80&w=2000",
+    title: "ALIVIO ARTICULAR REAL",
+    subtitle: "Flexanil Ultra Forte: La solución definitiva para recuperar tu movilidad y decirle adiós al dolor.",
+    image: "https://images.unsplash.com/photo-1576091160550-2173bdb999ef?auto=format&fit=crop&q=80&w=2000",
     cta: "Comprar Ahora"
   },
   {
     id: 3,
-    title: "FORTISOL FIT",
-    subtitle: "Apoya la quema de grasa, mejora el rendimiento físico y aumenta tus niveles de energía.",
-    image: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&q=80&w=2000",
+    title: "ENERGÍA QUE TE IMPULSA",
+    subtitle: "Fortisol Fit: Potencia tu metabolismo y alcanza tus metas con energía 100% natural.",
+    image: "https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&q=80&w=2000",
     cta: "Descubrir Más"
   }
 ];
@@ -32,13 +32,20 @@ interface HeroCarouselProps {
 
 export function HeroCarousel({ onNavigate, slides: propSlides }: HeroCarouselProps) {
   const [current, setCurrent] = useState(0);
-  const slides = propSlides.length > 0 ? propSlides.map(s => ({
+  const isUsingStatic = propSlides.length === 0;
+  const slides = !isUsingStatic ? propSlides.map(s => ({
     id: s.id,
     title: s.title || '',
     subtitle: s.subtitle || '',
     image: s.image_url || s.image || '',
     cta: s.button_text || 'Ver Más'
   })) : staticSlides;
+
+  useEffect(() => {
+    if (isUsingStatic) {
+      console.warn('HeroCarousel: No se recibieron slides dinámicos, mostrando diapositivas de demostración.');
+    }
+  }, [isUsingStatic]);
 
   useEffect(() => {
     const timer = setInterval(() => {
