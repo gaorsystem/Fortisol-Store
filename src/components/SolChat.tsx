@@ -359,7 +359,7 @@ export default function SolChat({ onNavigate }: SolChatProps) {
       {/* Floating Bubble */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className={`fixed bottom-6 right-6 w-14 h-14 rounded-full flex items-center justify-center shadow-lg z-[9999] transition-all duration-300 hover:scale-110 border-2 font-sans ${
+        className={`fixed bottom-24 md:bottom-6 right-4 md:right-6 w-14 h-14 rounded-full flex items-center justify-center shadow-lg z-[9999] transition-all duration-300 hover:scale-110 border-2 font-sans ${
           open ? 'bg-black border-yellow-400 rotate-90' : 'bg-yellow-400 border-black hover:bg-yellow-500'
         }`}
         aria-label="Chat con Sol"
@@ -375,7 +375,7 @@ export default function SolChat({ onNavigate }: SolChatProps) {
       {!open && (
         <div
           onClick={() => setOpen(true)}
-          className="fixed bottom-24 right-6 bg-white border-2 border-yellow-400 rounded-xl px-4 py-2.5 text-xs text-gray-700 shadow-xl z-[9998] cursor-pointer animate-in fade-in slide-in-from-bottom-2 duration-500 font-sans"
+          className="fixed bottom-40 md:bottom-24 right-4 md:right-6 bg-white border-2 border-yellow-400 rounded-xl px-4 py-2.5 text-xs text-gray-700 shadow-xl z-[9998] cursor-pointer animate-in fade-in slide-in-from-bottom-2 duration-500 font-sans"
         >
           👋 ¿En qué te puedo ayudar?
           <div className="absolute bottom-[-8px] right-7 w-3 h-3 bg-white border-r-2 border-b-2 border-yellow-400 rotate-45" />
@@ -384,7 +384,7 @@ export default function SolChat({ onNavigate }: SolChatProps) {
 
       {/* Chat Window */}
       {open && (
-        <div className="fixed bottom-24 right-6 w-[360px] h-[580px] max-h-[80vh] rounded-2xl bg-white border-2 border-yellow-400 shadow-2xl flex flex-col z-[9998] overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300 font-sans">
+        <div className="fixed bottom-0 md:bottom-24 right-0 md:right-6 w-full md:w-[360px] h-full md:h-[580px] md:max-h-[80vh] rounded-none md:rounded-2xl bg-white border-0 md:border-2 border-yellow-400 shadow-2xl flex flex-col z-[9999] overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300 font-sans">
           {/* Header */}
           <div className="bg-black p-4 flex items-center gap-3 border-b border-yellow-400">
             <div className="w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center text-black font-black border-2 border-white/30">
