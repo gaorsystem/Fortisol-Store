@@ -312,7 +312,7 @@ export default function SolChat({ onNavigate }: SolChatProps) {
       let errorMessage = "Hubo un error de conexión. Intenta de nuevo. 😊";
       
       if (error.message?.includes("GEMINI_API_KEY")) {
-        errorMessage = "⚠️ Error de configuración: Falta la clave de API de Gemini. Por favor, asegúrate de configurarla en las variables de entorno de Vercel/GitHub.";
+        errorMessage = "⚠️ **Configuración necesaria:** Para que pueda responderte en tu sitio web, necesitas agregar una API Key gratuita. \n\n1. Consíguela en [aistudio.google.com](https://aistudio.google.com/app/apikey)\n2. Agrégala en Vercel como `GEMINI_API_KEY`.";
       } else if (error.message?.includes("API key not valid")) {
         errorMessage = "⚠️ La clave de API de Gemini no es válida. Por favor, revísala en tu configuración.";
       } else if (error.message) {
