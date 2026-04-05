@@ -182,9 +182,17 @@ export default function App() {
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
+  const handlePromoAccept = (offer: any) => {
+    // Buscar el producto Flexanil Ultra Forte (que es el de la promo por defecto)
+    const promoProduct = products.find(p => p.name.toLowerCase().includes('flexanil')) || products[0];
+    if (promoProduct) {
+      handleAddToCart(promoProduct, 1, promoProduct.variants[0]);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col font-sans text-gray-900 selection:bg-black selection:text-white">
-      <PromoModal offers={offers} />
+      <PromoModal offers={offers} onAccept={handlePromoAccept} />
       
       <Navbar 
         cartCount={cartCount} 

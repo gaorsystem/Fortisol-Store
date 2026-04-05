@@ -3,9 +3,10 @@ import { X } from 'lucide-react';
 
 interface PromoModalProps {
   offers: any[];
+  onAccept: (offer: any) => void;
 }
 
-export function PromoModal({ offers }: PromoModalProps) {
+export function PromoModal({ offers, onAccept }: PromoModalProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
@@ -44,37 +45,40 @@ export function PromoModal({ offers }: PromoModalProps) {
           <X className="w-5 h-5" />
         </button>
         
-        <div className="aspect-square relative bg-gray-100 group/image overflow-hidden">
+        <div className="relative bg-gray-100 group/image overflow-hidden max-h-[60vh]">
           <img
             src={activeOffer.image_url || activeOffer.image}
             alt={activeOffer.title}
-            className="w-full h-full object-cover hover:scale-105 transition-all duration-700 cursor-pointer"
+            className="w-full h-full object-contain hover:scale-105 transition-all duration-700 cursor-pointer"
             referrerPolicy="no-referrer"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex flex-col justify-end p-8">
-            <span className="text-white font-bold tracking-widest uppercase text-xs mb-2 border border-white/30 inline-block w-fit px-2 py-1">
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-8">
+            <span className="text-white font-bold tracking-widest uppercase text-[10px] mb-2 border border-white/30 inline-block w-fit px-2 py-1 bg-black/20 backdrop-blur-sm">
               Oferta Exclusiva
             </span>
-            <h2 className="text-4xl font-black text-white leading-none tracking-tighter uppercase">
+            <h2 className="text-3xl font-black text-white leading-none tracking-tighter uppercase drop-shadow-lg">
               {activeOffer.title}
             </h2>
           </div>
         </div>
         
-        <div className="p-8 text-center">
-          <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+        <div className="p-6 text-center">
+          <p className="text-gray-600 mb-6 text-xs leading-relaxed">
             {activeOffer.subtitle || activeOffer.description || "Obtén un descuento especial en tu primera compra de la línea de suplementos FORTISOL."}
           </p>
           
           {activeOffer.code && (
-            <div className="bg-gray-50 p-4 font-mono text-2xl font-black tracking-widest mb-6 border-2 border-dashed border-black text-black">
+            <div className="bg-gray-50 p-3 font-mono text-xl font-black tracking-widest mb-6 border-2 border-dashed border-black text-black">
               {activeOffer.code}
             </div>
           )}
           
           <button
-            onClick={() => setIsOpen(false)}
-            className="w-full bg-black text-white py-4 font-bold uppercase tracking-widest hover:bg-gray-900 transition-colors"
+            onClick={() => {
+              onAccept(activeOffer);
+              setIsOpen(false);
+            }}
+            className="w-full bg-black text-white py-4 font-bold uppercase tracking-widest hover:bg-gray-900 transition-colors shadow-xl"
           >
             Aprovechar Oferta
           </button>
