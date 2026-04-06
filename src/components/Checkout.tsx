@@ -78,6 +78,22 @@ export function Checkout({ items, onBack, onSuccess }: CheckoutProps) {
     
     // Save to Supabase
     try {
+      // 1. Upsert customer first to maintain CRM directory
+      const { error: customerError } = await supabase
+        .from('customers')
+        .upsert({
+          name: formData.name,
+          phone: formData.phone,
+          dni: formData.dni,
+          department: formData.department,
+          province: formData.province,
+          district: formData.district,
+          address: formData.address
+        }, { onConflict: 'phone' });
+
+      if (customerError) console.error('Error upserting customer:', customerError);
+
+      // 2. Save the order
       const { error } = await supabase
         .from('orders')
         .insert({

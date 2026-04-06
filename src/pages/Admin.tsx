@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
-type Tab = 'products' | 'slides' | 'offers' | 'orders' | 'settings';
+type Tab = 'products' | 'slides' | 'offers' | 'orders' | 'crm' | 'settings';
 
 export function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -42,6 +42,7 @@ export function Admin() {
   const [editingItem, setEditingItem] = useState<any | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallBtn, setShowInstallBtn] = useState(false);
 
@@ -102,6 +103,7 @@ export function Admin() {
       case 'slides': table = 'slides'; break;
       case 'offers': table = 'offers'; break;
       case 'orders': table = 'orders'; break;
+      case 'crm': table = 'customers'; break;
     }
 
     const { data, error } = await supabase
@@ -158,6 +160,7 @@ export function Admin() {
       case 'slides': table = 'slides'; break;
       case 'offers': table = 'offers'; break;
       case 'orders': table = 'orders'; break;
+      case 'crm': table = 'customers'; break;
     }
 
     const { error } = await supabase
@@ -198,6 +201,7 @@ export function Admin() {
       case 'slides': table = 'slides'; break;
       case 'offers': table = 'offers'; break;
       case 'orders': table = 'orders'; break;
+      case 'crm': table = 'customers'; break;
     }
 
     const itemToSave = { ...editingItem };
@@ -396,6 +400,13 @@ export function Admin() {
             Pedidos
           </button>
           <button 
+            onClick={() => setActiveTab('crm')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'crm' ? 'bg-yellow-400 text-black shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+          >
+            <UserIcon className="w-5 h-5" />
+            Clientes (CRM)
+          </button>
+          <button 
             onClick={() => setActiveTab('settings')}
             className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'settings' ? 'bg-yellow-400 text-black shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
           >
@@ -406,6 +417,20 @@ export function Admin() {
 
         {/* Content */}
         <div className="bg-white rounded-3xl md:rounded-2xl border-2 border-black overflow-hidden shadow-xl">
+          {(activeTab === 'crm' || activeTab === 'orders') && (
+            <div className="p-4 border-b-2 border-black bg-gray-50 flex flex-col md:flex-row gap-4 items-center">
+              <div className="relative flex-1 w-full">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input 
+                  type="text"
+                  placeholder={activeTab === 'crm' ? "Buscar cliente por nombre o teléfono..." : "Buscar pedido por nombre, teléfono o ID..."}
+                  className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none font-bold"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
           {loading && ((activeTab !== 'settings' && !items.length) || (activeTab === 'settings' && !settings)) ? (
             <div className="p-20 text-center">
               <div className="animate-spin w-10 h-10 border-4 border-yellow-400 border-t-black rounded-full mx-auto mb-4"></div>
@@ -562,17 +587,38 @@ export function Admin() {
                       {activeTab === 'orders' && (
                         <>
                           <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500">Cliente</th>
+                          <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500">Envío</th>
                           <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500">Pago</th>
                           <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500">Total</th>
                           <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500">Estado</th>
+                        </>
+                      )}
+                      {activeTab === 'crm' && (
+                        <>
+                          <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500">Cliente</th>
+                          <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500">DNI</th>
+                          <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500">Ubicación</th>
+                          <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500">Pedidos</th>
                         </>
                       )}
                       <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500 text-right">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {items.map((item) => (
-                      <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                    {items
+                      .filter(item => {
+                        if (!searchTerm) return true;
+                        const search = searchTerm.toLowerCase();
+                        return (
+                          (item.name?.toLowerCase().includes(search)) ||
+                          (item.customer_name?.toLowerCase().includes(search)) ||
+                          (item.phone?.toLowerCase().includes(search)) ||
+                          (item.customer_phone?.toLowerCase().includes(search)) ||
+                          (item.order_custom_id?.toLowerCase().includes(search))
+                        );
+                      })
+                      .map((item) => (
+                        <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-4">
                             {(item.image_url || item.image) && (
@@ -604,6 +650,15 @@ export function Admin() {
                             <td className="px-6 py-4">
                               <div className="text-sm font-bold">{item.customer_name}</div>
                               <div className="text-xs text-gray-500">{item.customer_phone}</div>
+                              <div className="text-[10px] text-gray-400">DNI: {item.customer_dni || 'No reg.'}</div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex flex-col">
+                                <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded self-start ${item.shipping_method === 'shalom' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
+                                  {item.shipping_method === 'shalom' ? 'Shalom' : 'Lima Delivery'}
+                                </span>
+                                <span className="text-[10px] text-gray-500 mt-1 font-bold">{item.district}, {item.province}</span>
+                              </div>
                             </td>
                             <td className="px-6 py-4">
                               <div className="flex flex-col">
@@ -617,6 +672,30 @@ export function Admin() {
                                 {getStatusIcon(item.status)}
                                 <span className="text-xs font-bold uppercase">{getStatusLabel(item.status)}</span>
                               </div>
+                            </td>
+                          </>
+                        )}
+                        {activeTab === 'crm' && (
+                          <>
+                            <td className="px-6 py-4">
+                              <div className="text-sm font-bold">{item.name}</div>
+                              <div className="text-xs text-gray-500">{item.phone}</div>
+                            </td>
+                            <td className="px-6 py-4 font-bold text-gray-600">{item.dni || '-'}</td>
+                            <td className="px-6 py-4">
+                              <div className="text-xs font-bold">{item.district}, {item.province}</div>
+                              <div className="text-[10px] text-gray-400">{item.address}</div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <button 
+                                onClick={() => {
+                                  // This would ideally open a modal with order history
+                                  alert(`Historial de pedidos para ${item.name} próximamente...`);
+                                }}
+                                className="text-[10px] font-black uppercase bg-gray-100 px-3 py-1 rounded-full hover:bg-black hover:text-white transition-all"
+                              >
+                                Ver Historial
+                              </button>
                             </td>
                           </>
                         )}
@@ -644,8 +723,20 @@ export function Admin() {
 
               {/* Mobile Card View */}
               <div className="md:hidden divide-y divide-gray-100">
-                {items.map((item) => (
-                  <div key={item.id} className="p-4 space-y-4">
+                {items
+                  .filter(item => {
+                    if (!searchTerm) return true;
+                    const search = searchTerm.toLowerCase();
+                    return (
+                      (item.name?.toLowerCase().includes(search)) ||
+                      (item.customer_name?.toLowerCase().includes(search)) ||
+                      (item.phone?.toLowerCase().includes(search)) ||
+                      (item.customer_phone?.toLowerCase().includes(search)) ||
+                      (item.order_custom_id?.toLowerCase().includes(search))
+                    );
+                  })
+                  .map((item) => (
+                    <div key={item.id} className="p-4 space-y-4">
                     <div className="flex items-start gap-4">
                       {(item.image_url || item.image) && (
                         <img 
@@ -669,15 +760,29 @@ export function Admin() {
                         )}
 
                         {activeTab === 'orders' && (
-                          <div className="space-y-1">
+                          <div className="space-y-2">
                             <div className="flex items-center justify-between">
                               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{item.customer_name}</span>
                               <span className="font-black text-black">S/. {item.total}</span>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${item.shipping_method === 'shalom' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
+                                {item.shipping_method === 'shalom' ? 'Shalom' : 'Lima'}
+                              </span>
+                              <span className="text-[9px] font-bold text-gray-500">{item.district}</span>
                             </div>
                             <div className="flex items-center gap-2">
                               {getStatusIcon(item.status)}
                               <span className="text-[10px] font-black uppercase tracking-tighter">{getStatusLabel(item.status)}</span>
                             </div>
+                          </div>
+                        )}
+
+                        {activeTab === 'crm' && (
+                          <div className="space-y-1">
+                            <div className="font-black text-black text-sm uppercase">{item.name}</div>
+                            <div className="text-[10px] text-gray-500">{item.phone} • DNI: {item.dni || '-'}</div>
+                            <div className="text-[10px] text-gray-400 font-bold">{item.district}, {item.province}</div>
                           </div>
                         )}
                       </div>
@@ -743,6 +848,15 @@ export function Admin() {
             <ShoppingCart className="w-5 h-5" />
           </div>
           <span className="text-[9px] font-black uppercase tracking-tighter">Pedidos</span>
+        </button>
+        <button 
+          onClick={() => setActiveTab('crm')}
+          className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'crm' ? 'text-black scale-110' : 'text-gray-400'}`}
+        >
+          <div className={`p-2 rounded-xl ${activeTab === 'crm' ? 'bg-yellow-400 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : ''}`}>
+            <UserIcon className="w-5 h-5" />
+          </div>
+          <span className="text-[9px] font-black uppercase tracking-tighter">Clientes</span>
         </button>
         <button 
           onClick={() => setActiveTab('settings')}
@@ -1174,22 +1288,72 @@ export function Admin() {
                       className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition-all font-bold h-20"
                     />
                   </div>
-                  <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200 space-y-2">
-                    <div className="text-xs font-black uppercase text-gray-400">Detalles del Cliente</div>
-                    <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-gray-50 p-5 rounded-2xl border-2 border-black/5 space-y-4">
+                    <div className="text-xs font-black uppercase text-yellow-600 flex items-center gap-2">
+                      <UserIcon className="w-3 h-3" />
+                      Detalles del Cliente y Envío
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <div className="text-[10px] text-gray-500 uppercase">Nombre</div>
-                        <div className="font-bold">{editingItem?.customer_name}</div>
+                        <div className="text-[10px] text-gray-500 uppercase font-bold">Nombre del Cliente</div>
+                        <div className="font-bold text-sm">{editingItem?.customer_name || 'No registrado'}</div>
                       </div>
                       <div>
-                        <div className="text-[10px] text-gray-500 uppercase">Teléfono</div>
-                        <div className="font-bold">{editingItem?.customer_phone}</div>
+                        <div className="text-[10px] text-gray-500 uppercase font-bold">Teléfono / WhatsApp</div>
+                        <div className="font-bold text-sm">{editingItem?.customer_phone || 'No registrado'}</div>
                       </div>
                     </div>
-                    <div>
-                      <div className="text-[10px] text-gray-500 uppercase">Dirección</div>
-                      <div className="font-bold">{editingItem?.customer_address}, {editingItem?.district}, {editingItem?.province}</div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-gray-200/50">
+                      <div>
+                        <div className="text-[10px] text-gray-500 uppercase font-bold">DNI / Documento</div>
+                        <div className="font-bold text-sm text-blue-600">{editingItem?.customer_dni || 'No proporcionado'}</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-gray-500 uppercase font-bold">Método de Envío</div>
+                        <div className="inline-block px-2 py-0.5 bg-black text-white text-[10px] font-black rounded uppercase mt-1">
+                          {editingItem?.shipping_method === 'shalom' ? 'Shalom (Provincia)' : 'Delivery (Lima)'}
+                        </div>
+                      </div>
                     </div>
+
+                    <div className="pt-2 border-t border-gray-200/50">
+                      <div className="text-[10px] text-gray-500 uppercase font-bold">Dirección de Entrega / Agencia</div>
+                      <div className="font-bold text-sm">
+                        {editingItem?.customer_address && <span className="block text-black">{editingItem.customer_address}</span>}
+                        <span className="text-gray-600">
+                          {editingItem?.district}{editingItem?.province ? `, ${editingItem.province}` : ''}{editingItem?.department ? `, ${editingItem.department}` : ''}
+                        </span>
+                      </div>
+                      {editingItem?.reference && (
+                        <div className="mt-1 text-[11px] bg-yellow-100 p-2 rounded-lg border border-yellow-200">
+                          <span className="font-black uppercase text-[9px] block text-yellow-700">Referencia:</span>
+                          {editingItem.reference}
+                        </div>
+                      )}
+                    </div>
+
+                    {editingItem?.items && (
+                      <div className="pt-4 border-t-2 border-dashed border-gray-200">
+                        <div className="text-[10px] text-gray-500 uppercase font-bold mb-2">Productos en el Pedido</div>
+                        <div className="space-y-2">
+                          {editingItem.items.map((prod: any, i: number) => (
+                            <div key={i} className="flex justify-between items-center bg-white p-2 rounded-xl border border-gray-100 shadow-sm">
+                              <div className="flex flex-col">
+                                <span className="text-xs font-bold">{prod.quantity}x {prod.name}</span>
+                                {prod.variantName && <span className="text-[9px] text-gray-400 font-bold uppercase">{prod.variantName}</span>}
+                              </div>
+                              <span className="font-black text-xs">S/ {(prod.price * prod.quantity).toFixed(2)}</span>
+                            </div>
+                          ))}
+                          <div className="flex justify-between items-center pt-2 px-2">
+                            <span className="text-xs font-black uppercase">Total del Pedido</span>
+                            <span className="text-lg font-black text-green-600">S/ {editingItem.total?.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </>
               )}
