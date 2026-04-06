@@ -10,12 +10,12 @@ export function PromoModal({ offers, onAccept }: PromoModalProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    // Mostrar el popup después de 3 segundos si hay ofertas
+    // Mostrar el popup después de 0.8 segundos si hay ofertas
     const timer = setTimeout(() => {
       if (offers.length > 0 || !offers) {
         setIsOpen(true);
       }
-    }, 3000);
+    }, 800);
     return () => clearTimeout(timer);
   }, [offers]);
 

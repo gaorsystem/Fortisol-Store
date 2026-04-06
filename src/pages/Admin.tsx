@@ -166,7 +166,8 @@ export function Admin() {
       .eq('id', id);
 
     if (error) {
-      alert('Error al eliminar: ' + error.message);
+      console.error('Error al eliminar:', error);
+      alert('Error al eliminar: ' + (error.message || JSON.stringify(error)));
     } else {
       fetchData();
     }
@@ -202,6 +203,18 @@ export function Admin() {
     const itemToSave = { ...editingItem };
     if (activeTab === 'products') {
       itemToSave.price = parseFloat(itemToSave.price as any) || 0;
+      itemToSave.stock = parseInt(itemToSave.stock as any) || 0;
+      
+      // Map image_url to image for compatibility with different schemas
+      if (itemToSave.image_url) {
+        itemToSave.image = itemToSave.image_url;
+      } else if (itemToSave.image) {
+        itemToSave.image_url = itemToSave.image;
+      }
+
+      // Remove 'presentation' if it's causing schema errors as reported by the user
+      // The user reported: "Could not find the 'presentation' column of 'products' in the schema cache"
+      delete itemToSave.presentation;
     }
 
     const { error } = await supabase
@@ -209,7 +222,8 @@ export function Admin() {
       .upsert(itemToSave);
 
     if (error) {
-      alert('Error al guardar: ' + error.message);
+      console.error('Error al guardar:', error);
+      alert('Error al guardar: ' + (error.message || JSON.stringify(error)));
     } else {
       setEditingItem(null);
       setIsAdding(false);
@@ -768,6 +782,15 @@ export function Admin() {
                         className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition-all font-bold"
                       />
                     </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-black uppercase text-gray-500">Stock Disponible</label>
+                      <input 
+                        type="number" 
+                        value={editingItem?.stock || 0} 
+                        onChange={e => setEditingItem({...editingItem, stock: parseInt(e.target.value) || 0})}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition-all font-bold"
+                      />
+                    </div>
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-black uppercase text-gray-500">Eslogan (Tagline)</label>
@@ -787,6 +810,15 @@ export function Admin() {
                       placeholder="Escribe la descripción aquí..."
                     />
                   </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-black uppercase text-gray-500">Ingredientes</label>
+                    <textarea 
+                      value={editingItem?.ingredients || ''} 
+                      onChange={e => setEditingItem({...editingItem, ingredients: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition-all font-bold h-20"
+                      placeholder="Ej: Colágeno hidrolizado, Magnesio..."
+                    />
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <label className="text-xs font-black uppercase text-gray-500">Categoría</label>
@@ -797,14 +829,14 @@ export function Admin() {
                         className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition-all font-bold"
                       />
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-black uppercase text-gray-500">Presentación</label>
+                    <div className="space-y-1 opacity-50">
+                      <label className="text-xs font-black uppercase text-gray-500">Presentación (Deshabilitado - Error de Esquema)</label>
                       <input 
                         type="text" 
-                        placeholder="Ej: Doypack de 30 sachets"
+                        disabled
+                        placeholder="Columna no encontrada en DB"
                         value={editingItem?.presentation || ''} 
-                        onChange={e => setEditingItem({...editingItem, presentation: e.target.value})}
-                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition-all font-bold"
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 bg-gray-50 outline-none font-bold cursor-not-allowed"
                       />
                     </div>
                   </div>
