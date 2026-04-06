@@ -250,7 +250,8 @@ export function Admin() {
       // Pie de etiqueta (N° Pedido)
       doc.setFontSize(22);
       doc.setFont('helvetica', 'bold');
-      doc.text(`N° DE PEDIDO: ${order.order_number || order.id.substring(0, 8)}`, 15, yOffset + 110);
+      const orderCode = order.order_custom_id || order.order_number || order.id.substring(0, 8);
+      doc.text(`N° DE PEDIDO: ${orderCode}`, 15, yOffset + 110);
       
       doc.setFontSize(10);
       doc.text(companyName.toUpperCase(), 15, yOffset + 120);
@@ -261,18 +262,27 @@ export function Admin() {
       doc.text(labelTitle, 195, yOffset + 127, { align: 'right' });
       doc.setTextColor(0);
 
-      // Iconos de seguridad (Simulados)
-      doc.setLineWidth(0.2);
-      const iconX = 145;
-      const iconY = yOffset + 102;
-      for (let i = 0; i < 4; i++) {
-        doc.rect(iconX + (i * 12), iconY, 10, 10);
-      }
-      doc.setFontSize(6);
-      doc.text('FRÁGIL', iconX + 5, iconY + 13, { align: 'center' });
-      doc.text('HACIA ARRIBA', iconX + 17, iconY + 13, { align: 'center' });
-      doc.text('NO MOJAR', iconX + 29, iconY + 13, { align: 'center' });
-      doc.text('CUIDADO', iconX + 41, iconY + 13, { align: 'center' });
+      // Icono de FRÁGIL (Copa)
+      const iconX = 160;
+      const iconY = yOffset + 98;
+      doc.setLineWidth(0.8);
+      doc.rect(iconX, iconY, 25, 25); // Cuadro grande para Frágil
+      
+      // Dibujar una copa simple
+      doc.setLineWidth(0.5);
+      // Parte superior de la copa
+      doc.line(iconX + 6, iconY + 5, iconX + 19, iconY + 5); 
+      doc.line(iconX + 6, iconY + 5, iconX + 6, iconY + 10);
+      doc.line(iconX + 19, iconY + 5, iconX + 19, iconY + 10);
+      doc.arc(iconX + 12.5, iconY + 10, 6.5, 0, Math.PI, false);
+      // Tallo
+      doc.line(iconX + 12.5, iconY + 16.5, iconX + 12.5, iconY + 20);
+      // Base
+      doc.line(iconX + 8, iconY + 20, iconX + 17, iconY + 20);
+      
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.text('FRÁGIL', iconX + 12.5, iconY + 23.5, { align: 'center' });
     };
 
     // Dibujar primera etiqueta (Cargo)
@@ -730,6 +740,9 @@ export function Admin() {
                   <thead>
                     <tr className="bg-gray-50 border-b-2 border-black">
                       <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500">Info</th>
+                      {activeTab === 'orders' && (
+                        <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500">Código</th>
+                      )}
                       {activeTab === 'products' && (
                         <>
                           <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500">Precio</th>
@@ -776,20 +789,31 @@ export function Admin() {
                         <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-4">
-                            {(item.image_url || item.image) && (
-                              <img 
-                                src={item.image_url || item.image} 
-                                alt="" 
-                                className="w-12 h-12 rounded-lg object-cover border border-gray-200"
-                                referrerPolicy="no-referrer"
-                              />
+                            {activeTab === 'orders' ? (
+                              <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center border border-gray-200">
+                                <FileText className="w-6 h-6 text-gray-400" />
+                              </div>
+                            ) : (
+                              (item.image_url || item.image) && (
+                                <img 
+                                  src={item.image_url || item.image} 
+                                  alt="" 
+                                  className="w-12 h-12 rounded-lg object-cover border border-gray-200"
+                                  referrerPolicy="no-referrer"
+                                />
+                              )
                             )}
                             <div>
-                              <div className="font-bold text-black">{item.name || item.title || `#${item.order_number}`}</div>
+                              <div className="font-bold text-black">{item.name || item.title || (activeTab === 'orders' ? 'Detalle de Pedido' : `#${item.order_number}`)}</div>
                               <div className="text-xs text-gray-500 truncate max-w-[200px]">{item.description || item.subtitle || item.customer_phone}</div>
                             </div>
                           </div>
                         </td>
+                        {activeTab === 'orders' && (
+                          <td className="px-6 py-4 font-black text-black text-sm">
+                            {item.order_custom_id || item.order_number || item.id.substring(0, 8)}
+                          </td>
+                        )}
                         {activeTab === 'products' && (
                           <>
                             <td className="px-6 py-4 font-black text-black">S/. {item.price}</td>
