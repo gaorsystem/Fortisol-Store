@@ -67,7 +67,7 @@ export function Checkout({ items, onBack, onSuccess }: CheckoutProps) {
     const lastId = localStorage.getItem('fortisol_order_count') || '0';
     const nextId = parseInt(lastId) + 1;
     localStorage.setItem('fortisol_order_count', nextId.toString());
-    return `PWB-${nextId.toString().padStart(4, '0')}`;
+    return `PTF-${nextId.toString().padStart(4, '0')}`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

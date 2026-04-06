@@ -376,7 +376,7 @@ export function Admin() {
     if (activeTab === 'orders') {
       // STRATEGIC FIX: Strip fields that might be missing in the DB schema
       const essentialFields = [
-        'id', 'order_number', 'customer_name', 'customer_phone', 'customer_dni', 
+        'id', 'order_number', 'order_custom_id', 'source', 'customer_name', 'customer_phone', 'customer_dni', 
         'customer_address', 'district', 'province', 'department', 'reference',
         'shipping_method', 'payment_method', 'total', 'status', 'items', 'created_at'
       ];
@@ -515,19 +515,32 @@ export function Admin() {
             )}
             <button 
               onClick={() => {
-                const defaultItem = activeTab === 'products' ? {
-                  name: '',
-                  price: 0,
-                  description: '',
-                  category: 'General',
-                  tagline: '',
-                  presentation: '',
-                  benefits: [],
-                  variants: [
-                    { name: 'Unidad', price: 0 },
-                    { name: 'Pack x2', price: 0 }
-                  ]
-                } : {};
+                let defaultItem: any = {};
+                if (activeTab === 'products') {
+                  defaultItem = {
+                    name: '',
+                    price: 0,
+                    description: '',
+                    category: 'General',
+                    tagline: '',
+                    presentation: '',
+                    benefits: [],
+                    variants: [
+                      { name: 'Unidad', price: 0 },
+                      { name: 'Pack x2', price: 0 }
+                    ]
+                  };
+                } else if (activeTab === 'orders') {
+                  const lastId = localStorage.getItem('fortisol_manual_order_count') || '0';
+                  const nextId = parseInt(lastId) + 1;
+                  localStorage.setItem('fortisol_manual_order_count', nextId.toString());
+                  defaultItem = {
+                    order_custom_id: `PWF-${nextId.toString().padStart(4, '0')}`,
+                    status: 'pending',
+                    source: 'manual_admin',
+                    items: []
+                  };
+                }
                 setEditingItem(defaultItem);
                 setIsAdding(true);
               }}
@@ -1573,6 +1586,17 @@ export function Admin() {
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1">
+                      <label className="text-xs font-black uppercase text-gray-500">Código de Pedido</label>
+                      <input 
+                        type="text" 
+                        required
+                        value={editingItem?.order_custom_id || ''} 
+                        onChange={e => setEditingItem({...editingItem, order_custom_id: e.target.value})}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition-all font-bold"
+                        placeholder="PTF-0001 o PWF-0001"
+                      />
+                    </div>
+                    <div className="space-y-1">
                       <label className="text-xs font-black uppercase text-gray-500">Estado del Pedido</label>
                       <select 
                         value={editingItem?.status || 'pending'} 
@@ -1617,36 +1641,89 @@ export function Admin() {
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
+                      <div className="space-y-1">
                         <div className="text-[10px] text-gray-500 uppercase font-bold">Nombre del Cliente</div>
-                        <div className="font-bold text-sm">{editingItem?.customer_name || 'No registrado'}</div>
+                        <input 
+                          type="text" 
+                          value={editingItem?.customer_name || ''} 
+                          onChange={e => setEditingItem({...editingItem, customer_name: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border-2 border-gray-100 focus:border-black outline-none transition-all font-bold text-sm"
+                        />
                       </div>
-                      <div>
+                      <div className="space-y-1">
                         <div className="text-[10px] text-gray-500 uppercase font-bold">Teléfono / WhatsApp</div>
-                        <div className="font-bold text-sm">{editingItem?.customer_phone || 'No registrado'}</div>
+                        <input 
+                          type="text" 
+                          value={editingItem?.customer_phone || ''} 
+                          onChange={e => setEditingItem({...editingItem, customer_phone: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border-2 border-gray-100 focus:border-black outline-none transition-all font-bold text-sm"
+                        />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-gray-200/50">
-                      <div>
+                      <div className="space-y-1">
                         <div className="text-[10px] text-gray-500 uppercase font-bold">DNI / Documento</div>
-                        <div className="font-bold text-sm text-blue-600">{editingItem?.customer_dni || 'No proporcionado'}</div>
+                        <input 
+                          type="text" 
+                          value={editingItem?.customer_dni || ''} 
+                          onChange={e => setEditingItem({...editingItem, customer_dni: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border-2 border-gray-100 focus:border-black outline-none transition-all font-bold text-sm"
+                        />
                       </div>
-                      <div>
+                      <div className="space-y-1">
                         <div className="text-[10px] text-gray-500 uppercase font-bold">Método de Envío</div>
-                        <div className="inline-block px-2 py-0.5 bg-black text-white text-[10px] font-black rounded uppercase mt-1">
-                          {editingItem?.shipping_method === 'shalom' ? 'Shalom (Provincia)' : 'Delivery (Lima)'}
-                        </div>
+                        <select 
+                          value={editingItem?.shipping_method || 'delivery'} 
+                          onChange={e => setEditingItem({...editingItem, shipping_method: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border-2 border-gray-100 focus:border-black outline-none transition-all font-bold text-sm bg-white"
+                        >
+                          <option value="delivery">Delivery (Lima)</option>
+                          <option value="shalom">Shalom (Provincia)</option>
+                        </select>
                       </div>
                     </div>
 
                     <div className="pt-2 border-t border-gray-200/50">
                       <div className="text-[10px] text-gray-500 uppercase font-bold">Dirección de Entrega / Agencia</div>
-                      <div className="font-bold text-sm">
-                        {editingItem?.customer_address && <span className="block text-black">{editingItem.customer_address}</span>}
-                        <span className="text-gray-600">
-                          {editingItem?.district}{editingItem?.province ? `, ${editingItem.province}` : ''}{editingItem?.department ? `, ${editingItem.department}` : ''}
-                        </span>
+                      <div className="space-y-4">
+                        <div className="space-y-1">
+                          <input 
+                            type="text" 
+                            value={editingItem?.customer_address || ''} 
+                            onChange={e => setEditingItem({...editingItem, customer_address: e.target.value})}
+                            className="w-full px-4 py-2 rounded-xl border-2 border-gray-100 focus:border-black outline-none transition-all font-bold text-sm"
+                          />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="space-y-1">
+                            <div className="text-[10px] text-gray-500 uppercase font-bold">Distrito</div>
+                            <input 
+                              type="text" 
+                              value={editingItem?.district || ''} 
+                              onChange={e => setEditingItem({...editingItem, district: e.target.value})}
+                              className="w-full px-4 py-2 rounded-xl border-2 border-gray-100 focus:border-black outline-none transition-all font-bold text-sm"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <div className="text-[10px] text-gray-500 uppercase font-bold">Provincia</div>
+                            <input 
+                              type="text" 
+                              value={editingItem?.province || ''} 
+                              onChange={e => setEditingItem({...editingItem, province: e.target.value})}
+                              className="w-full px-4 py-2 rounded-xl border-2 border-gray-100 focus:border-black outline-none transition-all font-bold text-sm"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <div className="text-[10px] text-gray-500 uppercase font-bold">Departamento</div>
+                            <input 
+                              type="text" 
+                              value={editingItem?.department || ''} 
+                              onChange={e => setEditingItem({...editingItem, department: e.target.value})}
+                              className="w-full px-4 py-2 rounded-xl border-2 border-gray-100 focus:border-black outline-none transition-all font-bold text-sm"
+                            />
+                          </div>
+                        </div>
                       </div>
                       {editingItem?.reference && (
                         <div className="mt-1 text-[11px] bg-yellow-100 p-2 rounded-lg border border-yellow-200">

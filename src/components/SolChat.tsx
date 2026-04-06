@@ -65,7 +65,7 @@ PASO 3 (cuando elige Individual o Pack):
 |||
 COMPRAR:[nombre del producto]|[precio]
 |||
-[Mensaje 4: Mensaje corto y cálido de cierre, que cualquier duda estás aquí]
+[Mensaje 4: Mensaje corto y cálido de cierre. Menciona que su pedido tendrá un código **PWF-XXXX** para seguimiento]
 
 EJEMPLO REAL para Hígado / Digestión:
 ¡Excelente elección! 🌿 Cuidar el hígado es clave para sentirte bien por dentro ✨
