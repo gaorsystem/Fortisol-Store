@@ -268,17 +268,19 @@ export function Admin() {
       doc.setLineWidth(0.8);
       doc.rect(iconX, iconY, 25, 25); // Cuadro grande para Frágil
       
-      // Dibujar una copa simple
+      // Dibujar una copa simple (Estilo lineal para evitar errores de función)
       doc.setLineWidth(0.5);
-      // Parte superior de la copa
-      doc.line(iconX + 6, iconY + 5, iconX + 19, iconY + 5); 
-      doc.line(iconX + 6, iconY + 5, iconX + 6, iconY + 10);
-      doc.line(iconX + 19, iconY + 5, iconX + 19, iconY + 10);
-      doc.arc(iconX + 12.5, iconY + 10, 6.5, 0, Math.PI, false);
+      // Boca de la copa
+      doc.line(iconX + 7, iconY + 5, iconX + 18, iconY + 5); 
+      // Lados de la copa (V-shape)
+      doc.line(iconX + 7, iconY + 5, iconX + 9, iconY + 14);
+      doc.line(iconX + 18, iconY + 5, iconX + 16, iconY + 14);
+      // Fondo de la copa
+      doc.line(iconX + 9, iconY + 14, iconX + 16, iconY + 14);
       // Tallo
-      doc.line(iconX + 12.5, iconY + 16.5, iconX + 12.5, iconY + 20);
+      doc.line(iconX + 12.5, iconY + 14, iconX + 12.5, iconY + 19);
       // Base
-      doc.line(iconX + 8, iconY + 20, iconX + 17, iconY + 20);
+      doc.line(iconX + 9, iconY + 19, iconX + 16, iconY + 19);
       
       doc.setFontSize(8);
       doc.setFont('helvetica', 'bold');
