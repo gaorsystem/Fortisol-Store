@@ -72,6 +72,9 @@ export default function App() {
             image: p.image_url || p.image || '',
             price: basePrice,
             category: p.category || 'General',
+            is_featured: p.is_featured || false,
+            badge_text: p.badge_text || '',
+            featured_order: p.featured_order || 0,
             variants: variants
           };
         });

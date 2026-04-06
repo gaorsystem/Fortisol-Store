@@ -212,7 +212,10 @@ export function Admin() {
       // STRATEGIC FIX: The user's Supabase schema is missing several columns.
       // We will strip ALL non-essential columns that are causing errors.
       // This allows saving the basic product even if the DB is not fully configured.
-      const essentialFields = ['id', 'name', 'price', 'description', 'category', 'image_url', 'created_at'];
+      const essentialFields = [
+        'id', 'name', 'price', 'description', 'category', 'image_url', 'created_at',
+        'is_featured', 'badge_text', 'featured_order', 'benefits', 'variants', 'ingredients', 'stock'
+      ];
       
       Object.keys(itemToSave).forEach(key => {
         if (!essentialFields.includes(key)) {
@@ -798,6 +801,44 @@ export function Admin() {
                       />
                     </div>
                   </div>
+
+                  <div className="bg-yellow-50 p-4 rounded-2xl border-2 border-yellow-200 space-y-4">
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="checkbox" 
+                        id="is_featured"
+                        checked={editingItem?.is_featured || false} 
+                        onChange={e => setEditingItem({...editingItem, is_featured: e.target.checked})}
+                        className="w-5 h-5 accent-black"
+                      />
+                      <label htmlFor="is_featured" className="text-sm font-black uppercase text-black cursor-pointer">Producto Destacado (Aparece en Inicio)</label>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase text-gray-500">Etiqueta (Ej: Más Vendido)</label>
+                        <input 
+                          type="text" 
+                          placeholder="Más Vendido, Oferta, etc."
+                          value={editingItem?.badge_text || ''} 
+                          onChange={e => setEditingItem({...editingItem, badge_text: e.target.value})}
+                          className="w-full px-4 py-2 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition-all font-bold text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase text-gray-500">Orden en Destacados (1-3)</label>
+                        <input 
+                          type="number" 
+                          min="1"
+                          max="10"
+                          value={editingItem?.featured_order || 0} 
+                          onChange={e => setEditingItem({...editingItem, featured_order: parseInt(e.target.value) || 0})}
+                          className="w-full px-4 py-2 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition-all font-bold text-xs"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="space-y-1">
                     <label className="text-xs font-black uppercase text-gray-500">Eslogan (Tagline)</label>
                     <input 

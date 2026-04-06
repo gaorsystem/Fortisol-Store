@@ -12,7 +12,14 @@ interface HomeProps {
 }
 
 export function Home({ onNavigate, onProductClick, products, slides }: HomeProps) {
-  const featuredProducts = products.slice(0, 3);
+  // Filter products marked as featured and sort them by their featured_order
+  const featuredProducts = products
+    .filter(p => p.is_featured)
+    .sort((a, b) => (a.featured_order || 0) - (b.featured_order || 0))
+    .slice(0, 3);
+
+  // Fallback to first 3 products if no featured products are set
+  const displayProducts = featuredProducts.length > 0 ? featuredProducts : products.slice(0, 3);
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -66,7 +73,7 @@ export function Home({ onNavigate, onProductClick, products, slides }: HomeProps
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {featuredProducts.map(product => (
+            {displayProducts.map(product => (
               <ProductCard 
                 key={product.id} 
                 product={product} 

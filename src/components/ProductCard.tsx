@@ -24,6 +24,11 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
         <div className="absolute top-3 left-3 bg-black text-white text-[10px] font-bold uppercase tracking-wider px-2 py-0.5">
           {product.category}
         </div>
+        {product.badge_text && (
+          <div className="absolute top-3 right-3 bg-yellow-400 text-black text-[9px] font-black uppercase tracking-tighter px-2 py-0.5 border border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+            {product.badge_text}
+          </div>
+        )}
       </div>
       
       <div className="p-3 flex flex-col flex-grow">

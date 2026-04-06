@@ -15,6 +15,9 @@ export interface Product {
   price: number;
   category: string;
   variants?: ProductVariant[];
+  is_featured?: boolean;
+  badge_text?: string;
+  featured_order?: number;
 }
 
 export const products: Product[] = [
@@ -34,6 +37,9 @@ export const products: Product[] = [
     image: "https://images.unsplash.com/photo-1611078813354-150247071661?auto=format&fit=crop&q=80&w=800",
     price: 89.90,
     category: "Suplementos",
+    is_featured: true,
+    badge_text: "Más Vendido",
+    featured_order: 1,
     variants: [
       { name: "Unidad", price: 89.90 },
       { name: "Pack x2", price: 160.00 }
@@ -53,6 +59,9 @@ export const products: Product[] = [
     image: "https://images.unsplash.com/photo-1556040220-4096d522378d?auto=format&fit=crop&q=80&w=800",
     price: 79.90,
     category: "Control de Peso",
+    is_featured: true,
+    badge_text: "Top Ventas",
+    featured_order: 2,
     variants: [
       { name: "Unidad", price: 79.90 },
       { name: "Pack x2", price: 140.00 }
@@ -76,6 +85,9 @@ export const products: Product[] = [
     image: "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&q=80&w=800",
     price: 69.90,
     category: "Suplementos",
+    is_featured: true,
+    badge_text: "Más Pedido",
+    featured_order: 3,
     variants: [
       { name: "Unidad", price: 69.90 },
       { name: "Pack x2", price: 120.00 }
