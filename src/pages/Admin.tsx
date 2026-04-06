@@ -317,6 +317,33 @@ export function Admin() {
       });
     }
 
+    if (activeTab === 'orders') {
+      // STRATEGIC FIX: Strip fields that might be missing in the DB schema
+      const essentialFields = [
+        'id', 'order_number', 'customer_name', 'customer_phone', 'customer_dni', 
+        'customer_address', 'district', 'province', 'department', 'reference',
+        'shipping_method', 'payment_method', 'total', 'status', 'items', 'created_at'
+      ];
+      
+      Object.keys(itemToSave).forEach(key => {
+        if (!essentialFields.includes(key)) {
+          delete itemToSave[key];
+        }
+      });
+    }
+
+    if (activeTab === 'crm') {
+      const essentialFields = [
+        'id', 'name', 'phone', 'dni', 'address', 'district', 'province', 'created_at'
+      ];
+      
+      Object.keys(itemToSave).forEach(key => {
+        if (!essentialFields.includes(key)) {
+          delete itemToSave[key];
+        }
+      });
+    }
+
     const { error } = await supabase
       .from(table)
       .upsert(itemToSave);
