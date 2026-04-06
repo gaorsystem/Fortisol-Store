@@ -199,54 +199,92 @@ export function Admin() {
     const doc = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
-      format: [100, 100] // Formato cuadrado 100x100mm
+      format: 'a4'
     });
 
-    // Dibujar borde
-    doc.setLineWidth(0.5);
-    doc.rect(5, 5, 90, 90);
+    const companyName = settings?.footer_text?.split('-')[0]?.trim() || 'FORTISOL PERÚ';
 
-    // Título
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('ETIQUETA DE ENVÍO', 50, 15, { align: 'center' });
+    const drawLabelContent = (yOffset: number, labelTitle: string) => {
+      // Borde principal
+      doc.setLineWidth(0.8);
+      doc.rect(10, yOffset, 190, 130);
+
+      // Cabecera (Origen/Destino)
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`ORIGEN: LIMA`, 15, yOffset + 12);
+      doc.text(`DESTINO: ${(order.province || order.customer_province || order.district || 'LIMA').toUpperCase()}`, 110, yOffset + 12);
+      
+      doc.setLineWidth(0.5);
+      doc.line(10, yOffset + 18, 200, yOffset + 18);
+
+      // Sección Destinatario
+      doc.setFontSize(20);
+      doc.text('DESTINATARIO:', 15, yOffset + 30);
+      
+      doc.setFontSize(12);
+      doc.text('NOMBRE COMPLETO:', 20, yOffset + 42);
+      doc.setFont('helvetica', 'normal');
+      doc.text((order.customer_name || order.name || '-').toUpperCase(), 75, yOffset + 42);
+
+      doc.setFont('helvetica', 'bold');
+      doc.text('DNI:', 20, yOffset + 52);
+      doc.setFont('helvetica', 'normal');
+      doc.text(order.customer_dni || order.dni || '-', 75, yOffset + 52);
+
+      doc.setFont('helvetica', 'bold');
+      doc.text('CEL.:', 20, yOffset + 62);
+      doc.setFont('helvetica', 'normal');
+      doc.text(order.customer_phone || order.phone || '-', 75, yOffset + 62);
+
+      doc.setFont('helvetica', 'bold');
+      doc.text('DIRECCIÓN:', 20, yOffset + 72);
+      doc.setFont('helvetica', 'normal');
+      const address = `${order.customer_address || order.address || '-'} - ${order.district || order.customer_district || '-'}`;
+      const splitAddress = doc.splitTextToSize(address, 115);
+      doc.text(splitAddress, 75, yOffset + 72);
+
+      doc.setLineWidth(0.5);
+      doc.line(10, yOffset + 95, 200, yOffset + 95);
+
+      // Pie de etiqueta (N° Pedido)
+      doc.setFontSize(22);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`N° DE PEDIDO: ${order.order_number || order.id.substring(0, 8)}`, 15, yOffset + 110);
+      
+      doc.setFontSize(10);
+      doc.text(companyName.toUpperCase(), 15, yOffset + 120);
+
+      // Indicador de copia
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      doc.text(labelTitle, 195, yOffset + 127, { align: 'right' });
+      doc.setTextColor(0);
+
+      // Iconos de seguridad (Simulados)
+      doc.setLineWidth(0.2);
+      const iconX = 145;
+      const iconY = yOffset + 102;
+      for (let i = 0; i < 4; i++) {
+        doc.rect(iconX + (i * 12), iconY, 10, 10);
+      }
+      doc.setFontSize(6);
+      doc.text('FRÁGIL', iconX + 5, iconY + 13, { align: 'center' });
+      doc.text('HACIA ARRIBA', iconX + 17, iconY + 13, { align: 'center' });
+      doc.text('NO MOJAR', iconX + 29, iconY + 13, { align: 'center' });
+      doc.text('CUIDADO', iconX + 41, iconY + 13, { align: 'center' });
+    };
+
+    // Dibujar primera etiqueta (Cargo)
+    drawLabelContent(10, 'COPIA: CARGO (CONTROL)');
     
-    doc.setLineWidth(0.2);
-    doc.line(10, 18, 90, 18);
+    // Línea de corte
+    doc.setLineDashPattern([2, 2], 0);
+    doc.line(0, 148.5, 210, 148.5);
+    doc.setLineDashPattern([], 0);
 
-    // Contenido
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text('DESTINATARIO:', 10, 25);
-    doc.setFont('helvetica', 'normal');
-    doc.text((order.customer_name || order.name || 'SIN NOMBRE').toUpperCase(), 10, 30);
-
-    doc.setFont('helvetica', 'bold');
-    doc.text('TELÉFONO:', 10, 40);
-    doc.setFont('helvetica', 'normal');
-    doc.text(order.customer_phone || order.phone || '-', 10, 45);
-
-    doc.setFont('helvetica', 'bold');
-    doc.text('DNI:', 60, 40);
-    doc.setFont('helvetica', 'normal');
-    doc.text(order.customer_dni || order.dni || '-', 60, 45);
-
-    doc.setFont('helvetica', 'bold');
-    doc.text('DIRECCIÓN:', 10, 55);
-    doc.setFont('helvetica', 'normal');
-    const address = order.customer_address || order.address || '-';
-    const splitAddress = doc.splitTextToSize(address, 80);
-    doc.text(splitAddress, 10, 60);
-
-    doc.setFont('helvetica', 'bold');
-    doc.text('UBICACIÓN:', 10, 75);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`${order.customer_district || order.district || '-'}, ${order.customer_province || order.province || '-'}`, 10, 80);
-
-    doc.setFont('helvetica', 'bold');
-    doc.text('MÉTODO:', 10, 90);
-    doc.setFont('helvetica', 'normal');
-    doc.text(order.shipping_method === 'shalom' ? 'SHALOM' : 'LIMA DELIVERY', 30, 90);
+    // Dibujar segunda etiqueta (Paquete)
+    drawLabelContent(155, 'COPIA: PAQUETE (CLIENTE)');
 
     doc.save(`etiqueta_${order.order_number || order.id}.pdf`);
   };
