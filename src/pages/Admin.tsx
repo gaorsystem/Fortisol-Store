@@ -74,59 +74,66 @@ export function Admin() {
 
   // Fetch data based on active tab
   const fetchData = async () => {
-    setLoading(true);
+    if (!isAuthenticated && activeTab !== 'settings') return;
     
-    if (activeTab === 'settings') {
-      const { data, error } = await supabase
-        .from('settings')
-        .select('*')
-        .eq('id', 1)
-        .single();
-      
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching settings:', error);
-      } else {
-        setSettings(data || {
-          id: 1,
-          whatsapp_number: '51976791234',
-          facebook_url: '',
-          instagram_url: '',
-          tiktok_url: '',
-          logo_url: '',
-          footer_text: 'Fortisol Perú - Calidad y Confianza'
-        });
+    setLoading(true);
+    try {
+      if (activeTab === 'settings') {
+        const { data, error } = await supabase
+          .from('settings')
+          .select('*')
+          .eq('id', 1)
+          .single();
+        
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error fetching settings:', error);
+        } else {
+          setSettings(data || {
+            id: 1,
+            whatsapp_number: '51976791234',
+            facebook_url: '',
+            instagram_url: '',
+            tiktok_url: '',
+            logo_url: '',
+            footer_text: 'Fortisol Perú - Calidad y Confianza'
+          });
+        }
+        return;
       }
+
+      let table = '';
+      switch (activeTab) {
+        case 'products': table = 'products'; break;
+        case 'slides': table = 'slides'; break;
+        case 'offers': table = 'offers'; break;
+        case 'orders': table = 'orders'; break;
+        case 'crm': table = 'customers'; break;
+      }
+
+      if (!table) return;
+
+      if (activeTab === 'offers') {
+        const { data: productsData } = await supabase
+          .from('products')
+          .select('id, name, price');
+        setProducts(productsData || []);
+      }
+
+      const { data, error } = await supabase
+        .from(table)
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error(`Error fetching ${table}:`, error);
+      } else {
+        setItems(data || []);
+      }
+    } catch (err) {
+      console.error('Error en fetchData:', err);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    let table = '';
-    switch (activeTab) {
-      case 'products': table = 'products'; break;
-      case 'slides': table = 'slides'; break;
-      case 'offers': table = 'offers'; break;
-      case 'orders': table = 'orders'; break;
-      case 'crm': table = 'customers'; break;
-    }
-
-    if (activeTab === 'offers') {
-      const { data: productsData } = await supabase
-        .from('products')
-        .select('id, name, price');
-      setProducts(productsData || []);
-    }
-
-    const { data, error } = await supabase
-      .from(table)
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error(`Error fetching ${table}:`, error);
-    } else {
-      setItems(data || []);
-    }
-    setLoading(false);
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -158,8 +165,10 @@ export function Admin() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, [activeTab]);
+    if (isAuthenticated) {
+      fetchData();
+    }
+  }, [activeTab, isAuthenticated]);
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('¿Estás seguro de eliminar este elemento?')) return;
@@ -442,7 +451,7 @@ export function Admin() {
               className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-black text-white px-6 py-4 md:py-3 rounded-2xl md:rounded-xl font-bold hover:bg-gray-800 transition-all shadow-lg hover:shadow-xl active:scale-95"
             >
               <Plus className="w-5 h-5" />
-              Nuevo {activeTab === 'products' ? 'Producto' : activeTab === 'slides' ? 'Slide' : activeTab === 'offers' ? 'Oferta' : 'Pedido'}
+              Nuevo {activeTab === 'products' ? 'Producto' : activeTab === 'slides' ? 'Slide' : activeTab === 'offers' ? 'Oferta' : activeTab === 'crm' ? 'Cliente' : 'Pedido'}
             </button>
           </div>
         </div>
@@ -1383,6 +1392,73 @@ export function Admin() {
                       />
                       <span className="text-sm font-bold">Mostrar en Pop-up</span>
                     </label>
+                  </div>
+                </>
+              )}
+              
+              {activeTab === 'crm' && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-black uppercase text-gray-500">Nombre Completo</label>
+                      <input 
+                        type="text" 
+                        required
+                        value={editingItem?.name || ''} 
+                        onChange={e => setEditingItem({...editingItem, name: e.target.value})}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition-all font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-black uppercase text-gray-500">Teléfono / WhatsApp</label>
+                      <input 
+                        type="text" 
+                        required
+                        value={editingItem?.phone || ''} 
+                        onChange={e => setEditingItem({...editingItem, phone: e.target.value})}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition-all font-bold"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-black uppercase text-gray-500">DNI / Documento</label>
+                      <input 
+                        type="text" 
+                        value={editingItem?.dni || ''} 
+                        onChange={e => setEditingItem({...editingItem, dni: e.target.value})}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition-all font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-black uppercase text-gray-500">Dirección</label>
+                      <input 
+                        type="text" 
+                        value={editingItem?.address || ''} 
+                        onChange={e => setEditingItem({...editingItem, address: e.target.value})}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition-all font-bold"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-black uppercase text-gray-500">Distrito</label>
+                      <input 
+                        type="text" 
+                        value={editingItem?.district || ''} 
+                        onChange={e => setEditingItem({...editingItem, district: e.target.value})}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition-all font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-black uppercase text-gray-500">Provincia</label>
+                      <input 
+                        type="text" 
+                        value={editingItem?.province || ''} 
+                        onChange={e => setEditingItem({...editingItem, province: e.target.value})}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition-all font-bold"
+                      />
+                    </div>
                   </div>
                 </>
               )}
