@@ -676,8 +676,8 @@ export function Admin() {
                                 if (product) {
                                   return (
                                     <>
-                                      <span className="font-black text-black">S/. {product.variants[0]?.price || product.price}</span>
-                                      {product.price > (product.variants[0]?.price || product.price) && (
+                                      <span className="font-black text-black">S/. {product.variants?.[0]?.price || product.price}</span>
+                                      {product.price > (product.variants?.[0]?.price || product.price) && (
                                         <span className="text-[10px] text-gray-400 line-through">S/. {product.price}</span>
                                       )}
                                     </>

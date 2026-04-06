@@ -231,7 +231,7 @@ export default function App() {
         offers={offers.map(offer => {
           const product = products.find(p => p.id === offer.product_id);
           if (product) {
-            const variantPrice = product.variants[0]?.price || product.price;
+            const variantPrice = product.variants?.[0]?.price || product.price;
             return {
               ...offer,
               offer_price: variantPrice,
