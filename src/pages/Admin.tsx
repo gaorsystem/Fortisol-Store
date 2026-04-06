@@ -25,9 +25,11 @@ import {
   FileText,
   User as UserIcon,
   Download,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  MessageCircle
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { jsPDF } from 'jspdf';
 
 type Tab = 'products' | 'slides' | 'offers' | 'orders' | 'crm' | 'settings';
 
@@ -182,6 +184,62 @@ export function Admin() {
     } else {
       fetchData();
     }
+  };
+
+  const downloadLabel = (order: any) => {
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: [100, 100] // Formato cuadrado 100x100mm
+    });
+
+    // Dibujar borde
+    doc.setLineWidth(0.5);
+    doc.rect(5, 5, 90, 90);
+
+    // Título
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('ETIQUETA DE ENVÍO', 50, 15, { align: 'center' });
+    
+    doc.setLineWidth(0.2);
+    doc.line(10, 18, 90, 18);
+
+    // Contenido
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('DESTINATARIO:', 10, 25);
+    doc.setFont('helvetica', 'normal');
+    doc.text((order.customer_name || order.name || 'SIN NOMBRE').toUpperCase(), 10, 30);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('TELÉFONO:', 10, 40);
+    doc.setFont('helvetica', 'normal');
+    doc.text(order.customer_phone || order.phone || '-', 10, 45);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('DNI:', 60, 40);
+    doc.setFont('helvetica', 'normal');
+    doc.text(order.customer_dni || order.dni || '-', 60, 45);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('DIRECCIÓN:', 10, 55);
+    doc.setFont('helvetica', 'normal');
+    const address = order.customer_address || order.address || '-';
+    const splitAddress = doc.splitTextToSize(address, 80);
+    doc.text(splitAddress, 10, 60);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('UBICACIÓN:', 10, 75);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${order.customer_district || order.district || '-'}, ${order.customer_province || order.province || '-'}`, 10, 80);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('MÉTODO:', 10, 90);
+    doc.setFont('helvetica', 'normal');
+    doc.text(order.shipping_method === 'shalom' ? 'SHALOM' : 'LIMA DELIVERY', 30, 90);
+
+    doc.save(`etiqueta_${order.order_number || order.id}.pdf`);
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -692,7 +750,15 @@ export function Admin() {
                           <>
                             <td className="px-6 py-4">
                               <div className="text-sm font-bold">{item.customer_name}</div>
-                              <div className="text-xs text-gray-500">{item.customer_phone}</div>
+                              <a 
+                                href={`https://wa.me/51${(item.customer_phone || '').replace(/\s/g, '')}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                              >
+                                <MessageCircle className="w-3 h-3" />
+                                {item.customer_phone}
+                              </a>
                               <div className="text-[10px] text-gray-400">DNI: {item.customer_dni || 'No reg.'}</div>
                             </td>
                             <td className="px-6 py-4">
@@ -722,7 +788,15 @@ export function Admin() {
                           <>
                             <td className="px-6 py-4">
                               <div className="text-sm font-bold">{item.name}</div>
-                              <div className="text-xs text-gray-500">{item.phone}</div>
+                              <a 
+                                href={`https://wa.me/51${(item.phone || '').replace(/\s/g, '')}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                              >
+                                <MessageCircle className="w-3 h-3" />
+                                {item.phone}
+                              </a>
                             </td>
                             <td className="px-6 py-4 font-bold text-gray-600">{item.dni || '-'}</td>
                             <td className="px-6 py-4">
@@ -744,6 +818,15 @@ export function Admin() {
                         )}
                         <td className="px-6 py-4 text-right">
                           <div className="flex justify-end gap-2">
+                            {activeTab === 'orders' && (
+                              <button 
+                                onClick={() => downloadLabel(item)}
+                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                title="Descargar Etiqueta"
+                              >
+                                <FileText className="w-4 h-4" />
+                              </button>
+                            )}
                             <button 
                               onClick={() => setEditingItem(item)}
                               className="p-2 text-gray-400 hover:text-black hover:bg-gray-100 rounded-lg transition-all"
