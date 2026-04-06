@@ -8,16 +8,20 @@ interface PromoModalProps {
 
 export function PromoModal({ offers, onAccept }: PromoModalProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [hasBeenShown, setHasBeenShown] = useState(false);
 
   useEffect(() => {
-    // Mostrar el popup después de 0.8 segundos si hay ofertas
+    // Solo mostrar si no se ha mostrado antes y hay ofertas (o estamos en modo demo)
+    if (hasBeenShown) return;
+
     const timer = setTimeout(() => {
-      if (offers.length > 0 || !offers) {
+      if (offers.length > 0 || offers.length === 0) {
         setIsOpen(true);
+        setHasBeenShown(true);
       }
-    }, 800);
+    }, 2000); // Aumentamos a 2 segundos para que no sea tan intrusivo
     return () => clearTimeout(timer);
-  }, [offers]);
+  }, [offers.length, hasBeenShown]);
 
   const isUsingStatic = offers.length === 0;
   const activeOffer = !isUsingStatic ? offers[0] : {

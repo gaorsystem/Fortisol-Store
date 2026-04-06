@@ -185,6 +185,21 @@ export default function App() {
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
+  const mappedOffers = React.useMemo(() => {
+    return offers.map(offer => {
+      const product = products.find(p => p.id === offer.product_id);
+      if (product) {
+        const variantPrice = product.variants?.[0]?.price || product.price;
+        return {
+          ...offer,
+          offer_price: variantPrice,
+          original_price: product.price > variantPrice ? product.price : null
+        };
+      }
+      return offer;
+    });
+  }, [offers, products]);
+
   const handlePromoAccept = (offer: any) => {
     // Buscar el producto vinculado o usar Flexanil como fallback
     const promoProduct = (offer.product_id && products.find(p => p.id === offer.product_id)) || 
@@ -228,18 +243,7 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col font-sans text-gray-900 selection:bg-black selection:text-white">
       <PromoModal 
-        offers={offers.map(offer => {
-          const product = products.find(p => p.id === offer.product_id);
-          if (product) {
-            const variantPrice = product.variants?.[0]?.price || product.price;
-            return {
-              ...offer,
-              offer_price: variantPrice,
-              original_price: product.price > variantPrice ? product.price : null
-            };
-          }
-          return offer;
-        })} 
+        offers={mappedOffers} 
         onAccept={handlePromoAccept} 
       />
       
