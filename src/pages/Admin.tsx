@@ -205,16 +205,15 @@ export function Admin() {
       itemToSave.price = parseFloat(itemToSave.price as any) || 0;
       itemToSave.stock = parseInt(itemToSave.stock as any) || 0;
       
-      // Map image_url to image for compatibility with different schemas
-      if (itemToSave.image_url) {
-        itemToSave.image = itemToSave.image_url;
-      } else if (itemToSave.image) {
+      // Ensure image_url is the primary field for the database
+      if (itemToSave.image && !itemToSave.image_url) {
         itemToSave.image_url = itemToSave.image;
       }
 
-      // Remove 'presentation' if it's causing schema errors as reported by the user
-      // The user reported: "Could not find the 'presentation' column of 'products' in the schema cache"
+      // Remove fields that are known to cause schema errors in this specific Supabase setup
+      // The user reported: "Could not find the 'presentation' column" and "Could not find the 'image' column"
       delete itemToSave.presentation;
+      delete itemToSave.image;
     }
 
     const { error } = await supabase
