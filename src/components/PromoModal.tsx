@@ -59,6 +59,20 @@ export function PromoModal({ offers, onAccept }: PromoModalProps) {
             <h2 className="text-3xl font-black text-white leading-none tracking-tighter uppercase drop-shadow-lg">
               {activeOffer.title}
             </h2>
+            {(activeOffer.offer_price || activeOffer.original_price) && (
+              <div className="flex items-center gap-3 mt-2">
+                {activeOffer.original_price && (
+                  <span className="text-white/60 line-through font-bold text-sm">
+                    S/. {activeOffer.original_price}
+                  </span>
+                )}
+                {activeOffer.offer_price && (
+                  <span className="bg-yellow-400 text-black px-2 py-1 font-black text-xl rounded-sm shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]">
+                    S/. {activeOffer.offer_price}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
         

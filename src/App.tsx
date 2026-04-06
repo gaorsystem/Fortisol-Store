@@ -186,16 +186,62 @@ export default function App() {
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   const handlePromoAccept = (offer: any) => {
-    // Buscar el producto Flexanil Ultra Forte (que es el de la promo por defecto)
-    const promoProduct = products.find(p => p.name.toLowerCase().includes('flexanil')) || products[0];
+    // Buscar el producto vinculado o usar Flexanil como fallback
+    const promoProduct = (offer.product_id && products.find(p => p.id === offer.product_id)) || 
+                        products.find(p => p.name.toLowerCase().includes('flexanil')) || 
+                        products[0];
+
     if (promoProduct) {
-      handleAddToCart(promoProduct, 1, promoProduct.variants[0]);
+      const variant = promoProduct.variants[0];
+      const specialPrice = offer.offer_price || variant.price;
+      
+      // Generar un ID único para el item de promo para evitar colisiones
+      const cartItemId = `${promoProduct.id}-PROMO-${offer.id || 'default'}`;
+      
+      setCartItems(prev => {
+        const existing = prev.find(item => item.id === cartItemId);
+        if (existing) {
+          return prev.map(item => 
+            item.id === cartItemId 
+              ? { ...item, quantity: item.quantity + 1 }
+              : item
+          );
+        }
+        
+        const newItem: CartItem = {
+          id: cartItemId,
+          productId: promoProduct.id,
+          name: `${promoProduct.name} (OFERTA)`,
+          image: promoProduct.image,
+          price: specialPrice,
+          quantity: 1,
+          variantName: "Oferta Especial",
+          presentation: promoProduct.presentation
+        };
+        
+        return [...prev, newItem];
+      });
+      setIsCartOpen(true);
     }
   };
 
   return (
     <div className="min-h-screen flex flex-col font-sans text-gray-900 selection:bg-black selection:text-white">
-      <PromoModal offers={offers} onAccept={handlePromoAccept} />
+      <PromoModal 
+        offers={offers.map(offer => {
+          const product = products.find(p => p.id === offer.product_id);
+          if (product) {
+            const variantPrice = product.variants[0]?.price || product.price;
+            return {
+              ...offer,
+              offer_price: variantPrice,
+              original_price: product.price > variantPrice ? product.price : null
+            };
+          }
+          return offer;
+        })} 
+        onAccept={handlePromoAccept} 
+      />
       
       <Navbar 
         cartCount={cartCount} 

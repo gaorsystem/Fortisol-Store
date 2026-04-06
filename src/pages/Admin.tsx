@@ -42,6 +42,7 @@ export function Admin() {
   const [editingItem, setEditingItem] = useState<any | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [products, setProducts] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallBtn, setShowInstallBtn] = useState(false);
@@ -104,6 +105,13 @@ export function Admin() {
       case 'offers': table = 'offers'; break;
       case 'orders': table = 'orders'; break;
       case 'crm': table = 'customers'; break;
+    }
+
+    if (activeTab === 'offers') {
+      const { data: productsData } = await supabase
+        .from('products')
+        .select('id, name, price');
+      setProducts(productsData || []);
     }
 
     const { data, error } = await supabase
@@ -228,6 +236,18 @@ export function Admin() {
       });
 
       console.log('Guardando producto con campos esenciales:', itemToSave);
+    }
+
+    if (activeTab === 'offers') {
+      const essentialFields = [
+        'id', 'title', 'subtitle', 'image_url', 'is_active', 'show_in_popup', 'product_id', 'created_at'
+      ];
+      
+      Object.keys(itemToSave).forEach(key => {
+        if (!essentialFields.includes(key)) {
+          delete itemToSave[key];
+        }
+      });
     }
 
     const { error } = await supabase
@@ -584,6 +604,9 @@ export function Admin() {
                           <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500">Stock</th>
                         </>
                       )}
+                      {activeTab === 'offers' && (
+                        <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500">Precio</th>
+                      )}
                       {activeTab === 'orders' && (
                         <>
                           <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500">Cliente</th>
@@ -644,6 +667,26 @@ export function Admin() {
                               </span>
                             </td>
                           </>
+                        )}
+                        {activeTab === 'offers' && (
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col">
+                              {(() => {
+                                const product = products.find(p => p.id === item.product_id);
+                                if (product) {
+                                  return (
+                                    <>
+                                      <span className="font-black text-black">S/. {product.variants[0]?.price || product.price}</span>
+                                      {product.price > (product.variants[0]?.price || product.price) && (
+                                        <span className="text-[10px] text-gray-400 line-through">S/. {product.price}</span>
+                                      )}
+                                    </>
+                                  );
+                                }
+                                return <span className="text-[10px] text-gray-400 italic">Sin producto</span>;
+                              })()}
+                            </div>
+                          </td>
                         )}
                         {activeTab === 'orders' && (
                           <>
@@ -1223,6 +1266,20 @@ export function Admin() {
                       onChange={e => setEditingItem({...editingItem, image_url: e.target.value})}
                       className="w-full mt-2 px-4 py-2 rounded-xl border-2 border-gray-100 focus:border-black outline-none transition-all text-xs font-bold"
                     />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-black uppercase text-gray-500">Producto Vinculado</label>
+                    <select 
+                      value={editingItem?.product_id || ''} 
+                      onChange={e => setEditingItem({...editingItem, product_id: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition-all font-bold"
+                    >
+                      <option value="">Seleccionar producto...</option>
+                      {products.map(p => (
+                        <option key={p.id} value={p.id}>{p.name} (S/. {p.price})</option>
+                      ))}
+                    </select>
+                    <p className="text-[10px] text-gray-400 italic">Se usará el precio configurado en el producto seleccionado.</p>
                   </div>
                   <div className="flex items-center gap-4">
                     <label className="flex items-center gap-2 cursor-pointer">
