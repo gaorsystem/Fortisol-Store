@@ -196,109 +196,115 @@ export function Admin() {
   };
 
   const downloadLabel = (order: any) => {
-    const doc = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4'
-    });
+    console.log('Iniciando generación de etiqueta para pedido:', order);
+    try {
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
 
-    const companyName = settings?.footer_text?.split('-')[0]?.trim() || 'FORTISOL PERÚ';
+      const companyName = settings?.footer_text?.split('-')[0]?.trim() || 'FORTISOL PERÚ';
 
-    const drawLabelContent = (yOffset: number, labelTitle: string) => {
-      // Borde principal
-      doc.setLineWidth(0.8);
-      doc.rect(10, yOffset, 190, 130);
+      const drawLabelContent = (yOffset: number, labelTitle: string) => {
+        // Borde principal
+        doc.setLineWidth(0.8);
+        doc.rect(10, yOffset, 190, 130);
 
-      // Cabecera (Origen/Destino)
-      doc.setFontSize(16);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`ORIGEN: LIMA`, 15, yOffset + 12);
-      doc.text(`DESTINO: ${(order.province || order.customer_province || order.district || 'LIMA').toUpperCase()}`, 110, yOffset + 12);
+        // Cabecera (Origen/Destino)
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`ORIGEN: LIMA`, 15, yOffset + 12);
+        doc.text(`DESTINO: ${(order.province || order.customer_province || order.district || 'LIMA').toUpperCase()}`, 110, yOffset + 12);
+        
+        doc.setLineWidth(0.5);
+        doc.line(10, yOffset + 18, 200, yOffset + 18);
+
+        // Sección Destinatario
+        doc.setFontSize(20);
+        doc.text('DESTINATARIO:', 15, yOffset + 30);
+        
+        doc.setFontSize(12);
+        doc.text('NOMBRE COMPLETO:', 20, yOffset + 42);
+        doc.setFont('helvetica', 'normal');
+        doc.text((order.customer_name || order.name || '-').toUpperCase(), 75, yOffset + 42);
+
+        doc.setFont('helvetica', 'bold');
+        doc.text('DNI:', 20, yOffset + 52);
+        doc.setFont('helvetica', 'normal');
+        doc.text(order.customer_dni || order.dni || '-', 75, yOffset + 52);
+
+        doc.setFont('helvetica', 'bold');
+        doc.text('CEL.:', 20, yOffset + 62);
+        doc.setFont('helvetica', 'normal');
+        doc.text(order.customer_phone || order.phone || '-', 75, yOffset + 62);
+
+        doc.setFont('helvetica', 'bold');
+        doc.text('DIRECCIÓN:', 20, yOffset + 72);
+        doc.setFont('helvetica', 'normal');
+        const address = `${order.customer_address || order.address || '-'} - ${order.district || order.customer_district || '-'}`;
+        const splitAddress = doc.splitTextToSize(address, 115);
+        doc.text(splitAddress, 75, yOffset + 72);
+
+        doc.setLineWidth(0.5);
+        doc.line(10, yOffset + 95, 200, yOffset + 95);
+
+        // Pie de etiqueta (N° Pedido)
+        doc.setFontSize(22);
+        doc.setFont('helvetica', 'bold');
+        const orderCode = order.order_custom_id || order.order_number || order.id.substring(0, 8);
+        doc.text(`N° DE PEDIDO: ${orderCode}`, 15, yOffset + 110);
+        
+        doc.setFontSize(10);
+        doc.text(companyName.toUpperCase(), 15, yOffset + 120);
+
+        // Indicador de copia
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text(labelTitle, 195, yOffset + 127, { align: 'right' });
+        doc.setTextColor(0);
+
+        // Icono de FRÁGIL (Copa)
+        const iconX = 160;
+        const iconY = yOffset + 98;
+        doc.setLineWidth(0.8);
+        doc.rect(iconX, iconY, 25, 25); // Cuadro grande para Frágil
+        
+        // Dibujar una copa simple (Estilo lineal para evitar errores de función)
+        doc.setLineWidth(0.5);
+        // Boca de la copa
+        doc.line(iconX + 7, iconY + 5, iconX + 18, iconY + 5); 
+        // Lados de la copa (V-shape)
+        doc.line(iconX + 7, iconY + 5, iconX + 9, iconY + 14);
+        doc.line(iconX + 18, iconY + 5, iconX + 16, iconY + 14);
+        // Fondo de la copa
+        doc.line(iconX + 9, iconY + 14, iconX + 16, iconY + 14);
+        // Tallo
+        doc.line(iconX + 12.5, iconY + 14, iconX + 12.5, iconY + 19);
+        // Base
+        doc.line(iconX + 9, iconY + 19, iconX + 16, iconY + 19);
+        
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.text('FRÁGIL', iconX + 12.5, iconY + 23.5, { align: 'center' });
+      };
+
+      // Dibujar primera etiqueta (Cargo)
+      drawLabelContent(10, 'COPIA: CARGO (CONTROL)');
       
-      doc.setLineWidth(0.5);
-      doc.line(10, yOffset + 18, 200, yOffset + 18);
+      // Línea de corte
+      doc.setLineDashPattern([2, 2], 0);
+      doc.line(0, 148.5, 210, 148.5);
+      doc.setLineDashPattern([], 0);
 
-      // Sección Destinatario
-      doc.setFontSize(20);
-      doc.text('DESTINATARIO:', 15, yOffset + 30);
-      
-      doc.setFontSize(12);
-      doc.text('NOMBRE COMPLETO:', 20, yOffset + 42);
-      doc.setFont('helvetica', 'normal');
-      doc.text((order.customer_name || order.name || '-').toUpperCase(), 75, yOffset + 42);
+      // Dibujar segunda etiqueta (Paquete)
+      drawLabelContent(155, 'COPIA: PAQUETE (CLIENTE)');
 
-      doc.setFont('helvetica', 'bold');
-      doc.text('DNI:', 20, yOffset + 52);
-      doc.setFont('helvetica', 'normal');
-      doc.text(order.customer_dni || order.dni || '-', 75, yOffset + 52);
-
-      doc.setFont('helvetica', 'bold');
-      doc.text('CEL.:', 20, yOffset + 62);
-      doc.setFont('helvetica', 'normal');
-      doc.text(order.customer_phone || order.phone || '-', 75, yOffset + 62);
-
-      doc.setFont('helvetica', 'bold');
-      doc.text('DIRECCIÓN:', 20, yOffset + 72);
-      doc.setFont('helvetica', 'normal');
-      const address = `${order.customer_address || order.address || '-'} - ${order.district || order.customer_district || '-'}`;
-      const splitAddress = doc.splitTextToSize(address, 115);
-      doc.text(splitAddress, 75, yOffset + 72);
-
-      doc.setLineWidth(0.5);
-      doc.line(10, yOffset + 95, 200, yOffset + 95);
-
-      // Pie de etiqueta (N° Pedido)
-      doc.setFontSize(22);
-      doc.setFont('helvetica', 'bold');
-      const orderCode = order.order_custom_id || order.order_number || order.id.substring(0, 8);
-      doc.text(`N° DE PEDIDO: ${orderCode}`, 15, yOffset + 110);
-      
-      doc.setFontSize(10);
-      doc.text(companyName.toUpperCase(), 15, yOffset + 120);
-
-      // Indicador de copia
-      doc.setFontSize(8);
-      doc.setTextColor(150);
-      doc.text(labelTitle, 195, yOffset + 127, { align: 'right' });
-      doc.setTextColor(0);
-
-      // Icono de FRÁGIL (Copa)
-      const iconX = 160;
-      const iconY = yOffset + 98;
-      doc.setLineWidth(0.8);
-      doc.rect(iconX, iconY, 25, 25); // Cuadro grande para Frágil
-      
-      // Dibujar una copa simple (Estilo lineal para evitar errores de función)
-      doc.setLineWidth(0.5);
-      // Boca de la copa
-      doc.line(iconX + 7, iconY + 5, iconX + 18, iconY + 5); 
-      // Lados de la copa (V-shape)
-      doc.line(iconX + 7, iconY + 5, iconX + 9, iconY + 14);
-      doc.line(iconX + 18, iconY + 5, iconX + 16, iconY + 14);
-      // Fondo de la copa
-      doc.line(iconX + 9, iconY + 14, iconX + 16, iconY + 14);
-      // Tallo
-      doc.line(iconX + 12.5, iconY + 14, iconX + 12.5, iconY + 19);
-      // Base
-      doc.line(iconX + 9, iconY + 19, iconX + 16, iconY + 19);
-      
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'bold');
-      doc.text('FRÁGIL', iconX + 12.5, iconY + 23.5, { align: 'center' });
-    };
-
-    // Dibujar primera etiqueta (Cargo)
-    drawLabelContent(10, 'COPIA: CARGO (CONTROL)');
-    
-    // Línea de corte
-    doc.setLineDashPattern([2, 2], 0);
-    doc.line(0, 148.5, 210, 148.5);
-    doc.setLineDashPattern([], 0);
-
-    // Dibujar segunda etiqueta (Paquete)
-    drawLabelContent(155, 'COPIA: PAQUETE (CLIENTE)');
-
-    doc.save(`etiqueta_${order.order_number || order.id}.pdf`);
+      doc.save(`etiqueta_${order.order_number || order.id}.pdf`);
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      alert('Error al generar el PDF. Por favor, inténtelo de nuevo.');
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -921,10 +927,10 @@ export function Admin() {
                             {activeTab === 'orders' && (
                               <button 
                                 onClick={() => downloadLabel(item)}
-                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
                                 title="Descargar Etiqueta"
                               >
-                                <FileText className="w-4 h-4" />
+                                <Download className="w-4 h-4" />
                               </button>
                             )}
                             <button 
@@ -1014,6 +1020,15 @@ export function Admin() {
                       </div>
                     </div>
                     <div className="flex gap-2">
+                      {activeTab === 'orders' && (
+                        <button 
+                          onClick={() => downloadLabel(item)}
+                          className="flex-1 flex items-center justify-center gap-2 py-3 bg-blue-50 text-blue-600 rounded-xl font-bold text-xs active:scale-95 transition-all"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          Etiqueta
+                        </button>
+                      )}
                       <button 
                         onClick={() => setEditingItem(item)}
                         className="flex-1 flex items-center justify-center gap-2 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold text-xs active:scale-95 transition-all"
