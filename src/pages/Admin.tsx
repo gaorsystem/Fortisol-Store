@@ -825,7 +825,20 @@ export function Admin() {
                               )
                             )}
                             <div>
-                              <div className="font-bold text-black">{item.name || item.title || (activeTab === 'orders' ? 'Detalle de Pedido' : `#${item.order_number}`)}</div>
+                              <div className="flex items-center gap-2">
+                                <div className="font-bold text-black">{item.name || item.title || (activeTab === 'orders' ? 'Detalle de Pedido' : `#${item.order_number}`)}</div>
+                                {activeTab === 'orders' && (
+                                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${
+                                    item.source === 'asistente_sol' || item.order_custom_id?.startsWith('WSP-') 
+                                      ? 'bg-green-100 text-green-700 border border-green-200' 
+                                      : item.order_custom_id?.startsWith('PTF-')
+                                        ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                                        : 'bg-purple-100 text-purple-700 border border-purple-200'
+                                  }`}>
+                                    {item.source === 'asistente_sol' || item.order_custom_id?.startsWith('WSP-') ? 'WhatsApp' : item.order_custom_id?.startsWith('PTF-') ? 'Web' : 'Admin'}
+                                  </span>
+                                )}
+                              </div>
                               <div className="text-xs text-gray-500 truncate max-w-[200px]">{item.description || item.subtitle || item.customer_phone}</div>
                             </div>
                           </div>
@@ -1737,18 +1750,59 @@ export function Admin() {
                       <div className="pt-4 border-t-2 border-dashed border-gray-200">
                         <div className="text-[10px] text-gray-500 uppercase font-bold mb-2">Productos en el Pedido</div>
                         <div className="space-y-2">
-                          {editingItem.items.map((prod: any, i: number) => (
-                            <div key={i} className="flex justify-between items-center bg-white p-2 rounded-xl border border-gray-100 shadow-sm">
-                              <div className="flex flex-col">
-                                <span className="text-xs font-bold">{prod.quantity}x {prod.name}</span>
-                                {prod.variantName && <span className="text-[9px] text-gray-400 font-bold uppercase">{prod.variantName}</span>}
-                              </div>
-                              <span className="font-black text-xs">S/ {(prod.price * prod.quantity).toFixed(2)}</span>
-                            </div>
-                          ))}
+                          {(() => {
+                            let orderItems = [];
+                            try {
+                              if (Array.isArray(editingItem.items)) {
+                                orderItems = editingItem.items;
+                              } else if (typeof editingItem.items === 'string') {
+                                try {
+                                  const parsed = JSON.parse(editingItem.items);
+                                  orderItems = Array.isArray(parsed) ? parsed : [parsed];
+                                } catch (e) {
+                                  // If it's a string but not JSON, maybe it's just the product name
+                                  orderItems = [editingItem.items];
+                                }
+                              } else if (typeof editingItem.items === 'object' && editingItem.items !== null) {
+                                orderItems = [editingItem.items];
+                              } else {
+                                orderItems = [];
+                              }
+                            } catch (e) {
+                              orderItems = [];
+                            }
+                            
+                            if (!Array.isArray(orderItems)) orderItems = [];
+
+                            return orderItems.map((prod: any, i: number) => {
+                              let name = 'Producto';
+                              let quantity = 1;
+                              let price = 0;
+                              let variant = '';
+
+                              if (typeof prod === 'string') {
+                                name = prod;
+                              } else if (typeof prod === 'object' && prod !== null) {
+                                name = prod.name || prod.producto || prod.product || prod.title || prod.item || prod.desc || 'Producto';
+                                quantity = Number(prod.quantity || prod.cantidad || prod.qty || 1);
+                                price = Number(prod.price || prod.precio || prod.unit_price || prod.amount || prod.subtotal || 0);
+                                variant = prod.variantName || prod.variante || prod.variant || '';
+                              }
+
+                              return (
+                                <div key={i} className="flex justify-between items-center bg-white p-2 rounded-xl border border-gray-100 shadow-sm">
+                                  <div className="flex flex-col">
+                                    <span className="text-xs font-bold">{quantity}x {name}</span>
+                                    {variant && <span className="text-[9px] text-gray-400 font-bold uppercase">{variant}</span>}
+                                  </div>
+                                  <span className="font-black text-xs">S/ {(price * quantity).toFixed(2)}</span>
+                                </div>
+                              );
+                            });
+                          })()}
                           <div className="flex justify-between items-center pt-2 px-2">
                             <span className="text-xs font-black uppercase">Total del Pedido</span>
-                            <span className="text-lg font-black text-green-600">S/ {editingItem.total?.toFixed(2)}</span>
+                            <span className="text-lg font-black text-green-600">S/ {Number(editingItem.total || 0).toFixed(2)}</span>
                           </div>
                         </div>
                       </div>
