@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, CheckCircle2, Truck, MapPin, User, Phone, CreditCard, ShieldCheck, Info, Loader2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Truck, MapPin, User, Phone, CreditCard, ShieldCheck, Info, Loader2, MessageCircle } from 'lucide-react';
 import { CartItem } from './Cart';
 import { peruLocations } from '../data/locations';
 import { supabase } from '../lib/supabase';
@@ -14,6 +14,7 @@ export function Checkout({ items, onBack, onSuccess }: CheckoutProps) {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [businessPhone, setBusinessPhone] = useState("51976791234");
+  const [yapeQr, setYapeQr] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -23,16 +24,19 @@ export function Checkout({ items, onBack, onSuccess }: CheckoutProps) {
     district: '',
     address: '',
     reference: '',
+    payment_method_choice: 'pay_now', // 'pay_now' or 'pay_later'
+    operation_number: '',
   });
 
   useEffect(() => {
     const fetchSettings = async () => {
       const { data } = await supabase
         .from('settings')
-        .select('whatsapp_number')
+        .select('whatsapp_number, yape_qr_url')
         .eq('id', 1)
         .single();
       if (data?.whatsapp_number) setBusinessPhone(data.whatsapp_number);
+      if (data?.yape_qr_url) setYapeQr(data.yape_qr_url);
     };
     fetchSettings();
   }, []);
@@ -104,12 +108,14 @@ export function Checkout({ items, onBack, onSuccess }: CheckoutProps) {
           province: formData.province,
           district: formData.district,
           total: total,
-          status: 'pending',
+          status: formData.payment_method_choice === 'pay_now' ? 'paid' : 'pending',
           items: items,
           order_custom_id: orderId,
           customer_dni: formData.dni,
           shipping_method: isLimaLima ? 'delivery' : 'shalom',
-          source: 'web_store'
+          source: 'web_store',
+          payment_method: formData.payment_method_choice === 'pay_now' ? 'Directo (App)' : 'WhatsApp',
+          admin_notes: formData.operation_number ? `Cód. Operación: ${formData.operation_number}` : ''
         });
 
       if (error) throw error;
@@ -140,9 +146,11 @@ export function Checkout({ items, onBack, onSuccess }: CheckoutProps) {
       `${productsList}\n\n` +
       `------------------------------------------\n` +
       `💰 *TOTAL A PAGAR: S/ ${total.toFixed(2)}*\n` +
+      `💳 *MÉTODO:* ${formData.payment_method_choice === 'pay_now' ? 'PAGO DIRECTO REALIZADO' : 'COORDINAR POR WHATSAPP'}\n` +
+      `${formData.operation_number ? `🔢 *N° OPERACIÓN:* ${formData.operation_number}\n` : ''}` +
       `------------------------------------------\n\n` +
       `_Pedido generado desde la tienda web Fortisol Perú._\n` +
-      `_Por favor, confírmenme el pedido para proceder con el pago._`;
+      `${formData.payment_method_choice === 'pay_now' ? '_Ya realicé el pago, adjunto el número de operación._' : '_Por favor, confírmenme el pedido para proceder con el pago._'}`;
 
     const whatsappUrl = `https://wa.me/${businessPhone}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
@@ -212,16 +220,24 @@ export function Checkout({ items, onBack, onSuccess }: CheckoutProps) {
                           type="tel"
                           name="phone"
                           value={formData.phone}
-                          onChange={handleInputChange}
-                          className="w-full border border-gray-200 p-3 focus:border-black outline-none transition-colors"
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '');
+                            if (val.length <= 9) {
+                              setFormData({...formData, phone: val});
+                            }
+                          }}
+                          className={`w-full border p-3 outline-none transition-colors ${formData.phone.length === 9 ? 'border-green-500 focus:border-green-600' : 'border-gray-200 focus:border-black'}`}
                           placeholder="987654321"
                         />
+                        {formData.phone && formData.phone.length !== 9 && (
+                          <p className="text-[9px] text-red-500 font-bold uppercase">Debe tener 9 dígitos</p>
+                        )}
                       </div>
                     </div>
                     <button 
                       type="button"
                       onClick={() => setStep(2)}
-                      disabled={!formData.name || !formData.phone}
+                      disabled={!formData.name || formData.phone.length !== 9}
                       className="w-full bg-black text-white py-4 font-bold uppercase tracking-widest hover:bg-gray-900 transition-colors disabled:bg-gray-300"
                     >
                       Continuar al Envío
@@ -327,11 +343,18 @@ export function Checkout({ items, onBack, onSuccess }: CheckoutProps) {
                             type="text"
                             name="dni"
                             value={formData.dni}
-                            onChange={handleInputChange}
-                            className="w-full border border-gray-200 p-3 focus:border-black outline-none transition-colors"
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/\D/g, '');
+                              if (val.length <= 8) {
+                                setFormData({...formData, dni: val});
+                              }
+                            }}
+                            className={`w-full border p-3 outline-none transition-colors ${formData.dni.length === 8 ? 'border-green-500 focus:border-green-600' : 'border-gray-200 focus:border-black'}`}
                             placeholder="12345678"
-                            maxLength={8}
                           />
+                          {formData.dni && formData.dni.length !== 8 && (
+                            <p className="text-[9px] text-red-500 font-bold uppercase">Debe tener 8 dígitos</p>
+                          )}
                         </div>
                         <div className="bg-blue-50 p-4 border border-blue-100 flex items-start gap-3">
                           <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
@@ -353,7 +376,7 @@ export function Checkout({ items, onBack, onSuccess }: CheckoutProps) {
                       <button 
                         type="button"
                         onClick={() => setStep(3)}
-                        disabled={!formData.department || !formData.province || !formData.district || (isLimaLima ? !formData.address : !formData.dni)}
+                        disabled={!formData.department || !formData.province || !formData.district || (isLimaLima ? !formData.address : formData.dni.length !== 8)}
                         className="flex-1 bg-black text-white py-4 font-bold uppercase tracking-widest hover:bg-gray-900 transition-colors disabled:bg-gray-300"
                       >
                         Resumen Final
@@ -364,10 +387,96 @@ export function Checkout({ items, onBack, onSuccess }: CheckoutProps) {
 
                 {step === 3 && (
                   <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                    <h2 className="text-xl font-black tracking-tight uppercase">Confirmar Pedido</h2>
+                    <h2 className="text-xl font-black tracking-tight uppercase">Método de Pago y Confirmación</h2>
                     
                     <div className="space-y-4">
-                      <div className="border border-gray-200 p-4">
+                      {/* Payment Options */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <button
+                          type="button"
+                          onClick={() => setFormData({...formData, payment_method_choice: 'pay_now'})}
+                          className={`p-4 border-2 text-left transition-all rounded-xl relative overflow-hidden ${formData.payment_method_choice === 'pay_now' ? 'border-blue-600 bg-blue-50/50 shadow-md' : 'border-gray-100 hover:border-gray-200'}`}
+                        >
+                          {formData.payment_method_choice === 'pay_now' && (
+                            <div className="absolute top-0 right-0 bg-blue-600 text-white text-[8px] font-black px-2 py-0.5 rounded-bl-lg uppercase tracking-widest">Recomendado</div>
+                          )}
+                          <div className="flex items-center gap-3 mb-2">
+                            <CreditCard className={`w-5 h-5 ${formData.payment_method_choice === 'pay_now' ? 'text-blue-600' : 'text-gray-400'}`} />
+                            <span className={`font-black uppercase text-xs ${formData.payment_method_choice === 'pay_now' ? 'text-blue-700' : 'text-gray-700'}`}>Pagar Ahora (Directo)</span>
+                          </div>
+                          <p className="text-[10px] text-gray-500 leading-tight">Paga mediante Yape/Plin ahora mismo y registra tu número de operación.</p>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setFormData({...formData, payment_method_choice: 'pay_later'})}
+                          className={`p-4 border-2 text-left transition-all rounded-xl ${formData.payment_method_choice === 'pay_later' ? 'border-black bg-gray-50' : 'border-gray-100 hover:border-gray-200'}`}
+                        >
+                          <div className="flex items-center gap-3 mb-2">
+                            <MessageCircle className="w-5 h-5 text-green-600" />
+                            <span className="font-black uppercase text-xs">Pagar por WhatsApp</span>
+                          </div>
+                          <p className="text-[10px] text-gray-500 leading-tight">Coordina el pago directamente con un asesor después de generar el pedido.</p>
+                        </button>
+                      </div>
+
+                      {formData.payment_method_choice === 'pay_now' && (
+                        <div className="bg-gray-50 border-2 border-black p-6 rounded-2xl space-y-6 animate-in zoom-in-95 duration-300">
+                          <div className="text-center">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4">Escanea para pagar S/ {total.toFixed(2)}</p>
+                            <div className="flex items-center justify-center">
+                              <div className="space-y-2">
+                                {yapeQr ? (
+                                  <img 
+                                    src={yapeQr} 
+                                    alt="QR Yape" 
+                                    className="w-48 h-48 border-2 border-black rounded-xl p-1 bg-white mx-auto"
+                                    referrerPolicy="no-referrer"
+                                  />
+                                ) : (
+                                  <div className="w-48 h-48 border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center bg-white mx-auto">
+                                    <p className="text-[10px] text-gray-400 font-bold uppercase">QR no disponible</p>
+                                  </div>
+                                )}
+                                <p className="text-[10px] font-black text-purple-600 uppercase">Yape</p>
+                              </div>
+                            </div>
+                            <div className="mt-6 p-3 bg-white border border-gray-200 rounded-xl">
+                              <p className="text-[11px] font-bold text-gray-600">Titular: <span className="text-black">Fortisol Perú SAC</span></p>
+                              <p className="text-[11px] font-bold text-gray-600">Número: <span className="text-black">976 791 234</span></p>
+                            </div>
+
+                            <div className="mt-4 p-4 bg-yellow-50 border-2 border-yellow-200 rounded-2xl">
+                              <p className="text-[11px] font-black text-yellow-800 leading-tight text-center">
+                                ⚠️ IMPORTANTE: Envía tu voucher para validar tu envío: <br/>
+                                <a 
+                                  href="https://wa.me/51990257017" 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 mt-2 text-blue-600 hover:underline"
+                                >
+                                  👉 wa.me/51990257017 ☀️
+                                </a>
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Número de Operación / Código</label>
+                            <input 
+                              type="text"
+                              required={formData.payment_method_choice === 'pay_now'}
+                              value={formData.operation_number}
+                              onChange={(e) => setFormData({...formData, operation_number: e.target.value})}
+                              placeholder="Ej: 12345678"
+                              className="w-full border-2 border-black p-4 rounded-xl outline-none focus:bg-yellow-50 transition-all font-black text-center text-lg"
+                            />
+                            <p className="text-[9px] text-gray-400 text-center uppercase font-bold">Ingresa el código que aparece en tu comprobante de pago</p>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="border border-gray-200 p-4 rounded-xl">
                         <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Resumen de Envío</h3>
                         <div className="flex items-start gap-3">
                           <MapPin className="w-4 h-4 text-black mt-0.5" />
@@ -379,18 +488,19 @@ export function Checkout({ items, onBack, onSuccess }: CheckoutProps) {
                                 ? `${formData.address}, ${formData.district}, ${formData.province}`
                                 : `Envío Shalom: ${formData.district}, ${formData.province}, ${formData.department}`}
                             </p>
-                            {!isLimaLima && (
-                              <p className="text-[10px] text-gray-400 mt-1 italic">Recojo en la agencia más cercana.</p>
-                            )}
                           </div>
                         </div>
                       </div>
 
-                      <div className="bg-black text-white p-6 flex items-center gap-4">
-                        <ShieldCheck className="w-10 h-10 flex-shrink-0" />
+                      <div className="bg-black text-white p-6 flex items-center gap-4 rounded-xl">
+                        <ShieldCheck className="w-10 h-10 flex-shrink-0 text-yellow-400" />
                         <div>
-                          <p className="font-bold uppercase tracking-tight">Compra 100% Segura</p>
-                          <p className="text-xs text-gray-400 mt-1">Al hacer clic, te redirigiremos a nuestro WhatsApp oficial para coordinar el pago y confirmar tu envío.</p>
+                          <p className="font-bold uppercase tracking-tight">Finalizar Pedido</p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            {formData.payment_method_choice === 'pay_now' 
+                              ? "Al confirmar, enviaremos tu número de operación por WhatsApp para validar tu pago."
+                              : "Al confirmar, coordinaremos el pago y envío por WhatsApp."}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -399,14 +509,14 @@ export function Checkout({ items, onBack, onSuccess }: CheckoutProps) {
                       <button 
                         type="button"
                         onClick={() => setStep(2)}
-                        className="flex-1 border border-black py-4 font-bold uppercase tracking-widest hover:bg-gray-50 transition-colors"
+                        className="flex-1 border-2 border-black py-4 rounded-xl font-bold uppercase tracking-widest hover:bg-gray-50 transition-colors"
                       >
                         Atrás
                       </button>
                       <button 
                         type="submit"
-                        disabled={isSubmitting}
-                        className="flex-1 bg-green-600 text-white py-4 font-bold uppercase tracking-widest hover:bg-green-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                        disabled={isSubmitting || (formData.payment_method_choice === 'pay_now' && !formData.operation_number)}
+                        className={`flex-1 py-4 rounded-xl font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg ${formData.payment_method_choice === 'pay_now' ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-green-600 text-white hover:bg-green-700'}`}
                       >
                         {isSubmitting ? (
                           <>
@@ -414,7 +524,7 @@ export function Checkout({ items, onBack, onSuccess }: CheckoutProps) {
                             Procesando...
                           </>
                         ) : (
-                          'Confirmar por WhatsApp'
+                          formData.payment_method_choice === 'pay_now' ? 'Confirmar Pago' : 'Confirmar Pedido'
                         )}
                       </button>
                     </div>

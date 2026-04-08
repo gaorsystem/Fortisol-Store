@@ -26,7 +26,8 @@ import {
   User as UserIcon,
   Download,
   Settings as SettingsIcon,
-  MessageCircle
+  MessageCircle,
+  QrCode
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { jsPDF } from 'jspdf';
@@ -378,7 +379,7 @@ export function Admin() {
       const essentialFields = [
         'id', 'order_number', 'order_custom_id', 'source', 'customer_name', 'customer_phone', 'customer_dni', 
         'customer_address', 'district', 'province', 'department', 'reference',
-        'shipping_method', 'payment_method', 'total', 'status', 'items', 'created_at'
+        'shipping_method', 'payment_method', 'total', 'status', 'items', 'created_at', 'admin_notes'
       ];
       
       Object.keys(itemToSave).forEach(key => {
@@ -693,6 +694,49 @@ export function Admin() {
                           </label>
                         </div>
                       </div>
+                      <div className="space-y-2">
+                        <label className="text-[11px] font-black uppercase tracking-widest text-gray-400 ml-1">QR de Yape (Pago Directo)</label>
+                        <div className="flex items-center gap-4">
+                          {settings?.yape_qr_url ? (
+                            <img src={settings.yape_qr_url} alt="QR Yape" className="w-14 h-14 rounded-xl object-contain border-2 border-black p-1 bg-white" />
+                          ) : (
+                            <div className="w-14 h-14 rounded-xl bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center">
+                              <QrCode className="w-6 h-6 text-gray-300" />
+                            </div>
+                          )}
+                          <label className="flex-1 cursor-pointer">
+                            <div className="bg-black text-white px-4 py-3 rounded-xl text-xs font-bold text-center hover:bg-gray-800 transition-all">
+                              {uploading ? 'Subiendo...' : 'Subir QR Yape'}
+                            </div>
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              className="hidden" 
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                setUploading(true);
+                                try {
+                                  const fileExt = file.name.split('.').pop();
+                                  const fileName = `yape-qr-${Date.now()}.${fileExt}`;
+                                  const { error: uploadError } = await supabase.storage
+                                    .from('fortisol-assets')
+                                    .upload(`settings/${fileName}`, file);
+                                  if (uploadError) throw uploadError;
+                                  const { data: { publicUrl } } = supabase.storage
+                                    .from('fortisol-assets')
+                                    .getPublicUrl(`settings/${fileName}`);
+                                  setSettings({...settings, yape_qr_url: publicUrl});
+                                } catch (err: any) {
+                                  alert('Error: ' + err.message);
+                                } finally {
+                                  setUploading(false);
+                                }
+                              }} 
+                            />
+                          </label>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="space-y-4">
@@ -904,7 +948,11 @@ export function Admin() {
                             <td className="px-6 py-4">
                               <div className="flex flex-col">
                                 <span className="font-bold uppercase text-[11px] text-gray-700">{item.payment_method || 'No reg.'}</span>
-                                {item.admin_notes && <span className="text-[10px] text-gray-400 truncate max-w-[100px]">{item.admin_notes}</span>}
+                                {item.admin_notes && (
+                                  <span className={`text-[10px] font-bold mt-1 px-1.5 py-0.5 rounded self-start ${item.admin_notes.includes('Operación') ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'text-gray-400 truncate max-w-[120px]'}`}>
+                                    {item.admin_notes}
+                                  </span>
+                                )}
                               </div>
                             </td>
                             <td className="px-6 py-4 font-black text-black">S/. {item.total}</td>
@@ -1023,6 +1071,11 @@ export function Admin() {
                               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{item.customer_name}</span>
                               <span className="font-black text-black">S/. {item.total}</span>
                             </div>
+                            {item.admin_notes && (
+                              <div className={`text-[9px] font-bold px-2 py-1 rounded border ${item.admin_notes.includes('Operación') ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-gray-50 text-gray-500 border-gray-100'}`}>
+                                {item.admin_notes}
+                              </div>
+                            )}
                             <div className="flex flex-wrap gap-2">
                               <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${item.shipping_method === 'shalom' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
                                 {item.shipping_method === 'shalom' ? 'Shalom' : 'Lima'}
