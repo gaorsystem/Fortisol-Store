@@ -97,12 +97,16 @@ export function Admin() {
             tiktok_url: '',
             logo_url: '',
             yape_qr_url: '',
+            yape_owner: 'Fortisol Perú SAC',
+            yape_phone: '976 791 234',
             footer_text: 'Fortisol Perú - Calidad y Confianza'
           };
           
-          // Ensure yape_qr_url exists even if column is missing in DB
-          if (fetchedSettings && fetchedSettings.yape_qr_url === undefined) {
-            fetchedSettings.yape_qr_url = '';
+          // Ensure fields exist even if column is missing in DB
+          if (fetchedSettings) {
+            if (fetchedSettings.yape_qr_url === undefined) fetchedSettings.yape_qr_url = '';
+            if (fetchedSettings.yape_owner === undefined) fetchedSettings.yape_owner = 'Fortisol Perú SAC';
+            if (fetchedSettings.yape_phone === undefined) fetchedSettings.yape_phone = '976 791 234';
           }
           
           setSettings(fetchedSettings);
@@ -332,6 +336,8 @@ export function Admin() {
           tiktok_url: settings.tiktok_url,
           logo_url: settings.logo_url,
           yape_qr_url: settings.yape_qr_url,
+          yape_owner: settings.yape_owner,
+          yape_phone: settings.yape_phone,
           footer_text: settings.footer_text
         });
 
@@ -755,6 +761,28 @@ export function Admin() {
                             />
                           </label>
                         </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[11px] font-black uppercase tracking-widest text-gray-400 ml-1">Titular de Yape</label>
+                        <input 
+                          type="text" 
+                          value={settings?.yape_owner || ''}
+                          onChange={e => setSettings({...settings, yape_owner: e.target.value})}
+                          placeholder="Ej: Fortisol Perú SAC"
+                          className="w-full px-4 py-4 rounded-2xl border-2 border-gray-100 focus:border-black outline-none transition-all font-bold bg-gray-50"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[11px] font-black uppercase tracking-widest text-gray-400 ml-1">Número de Yape</label>
+                        <input 
+                          type="text" 
+                          value={settings?.yape_phone || ''}
+                          onChange={e => setSettings({...settings, yape_phone: e.target.value})}
+                          placeholder="Ej: 976 791 234"
+                          className="w-full px-4 py-4 rounded-2xl border-2 border-gray-100 focus:border-black outline-none transition-all font-bold bg-gray-50"
+                        />
                       </div>
                     </div>
 

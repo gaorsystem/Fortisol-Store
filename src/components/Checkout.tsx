@@ -15,6 +15,8 @@ export function Checkout({ items, onBack, onSuccess }: CheckoutProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [businessPhone, setBusinessPhone] = useState("51976791234");
   const [yapeQr, setYapeQr] = useState<string | null>(null);
+  const [yapeOwner, setYapeOwner] = useState("Fortisol Perú SAC");
+  const [yapePhone, setYapePhone] = useState("976 791 234");
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -32,11 +34,13 @@ export function Checkout({ items, onBack, onSuccess }: CheckoutProps) {
     const fetchSettings = async () => {
       const { data } = await supabase
         .from('settings')
-        .select('whatsapp_number, yape_qr_url')
+        .select('whatsapp_number, yape_qr_url, yape_owner, yape_phone')
         .eq('id', 1)
         .single();
       if (data?.whatsapp_number) setBusinessPhone(data.whatsapp_number);
       if (data?.yape_qr_url) setYapeQr(data.yape_qr_url);
+      if (data?.yape_owner) setYapeOwner(data.yape_owner);
+      if (data?.yape_phone) setYapePhone(data.yape_phone);
     };
     fetchSettings();
   }, []);
@@ -442,8 +446,8 @@ export function Checkout({ items, onBack, onSuccess }: CheckoutProps) {
                               </div>
                             </div>
                             <div className="mt-6 p-3 bg-white border border-gray-200 rounded-xl">
-                              <p className="text-[11px] font-bold text-gray-600">Titular: <span className="text-black">Fortisol Perú SAC</span></p>
-                              <p className="text-[11px] font-bold text-gray-600">Número: <span className="text-black">976 791 234</span></p>
+                              <p className="text-[11px] font-bold text-gray-600">Titular: <span className="text-black">{yapeOwner}</span></p>
+                              <p className="text-[11px] font-bold text-gray-600">Número: <span className="text-black">{yapePhone}</span></p>
                             </div>
 
                             <div className="mt-4 p-4 bg-yellow-50 border-2 border-yellow-200 rounded-2xl">
