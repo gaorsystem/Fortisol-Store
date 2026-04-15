@@ -89,15 +89,23 @@ export function Admin() {
         if (error && error.code !== 'PGRST116') {
           console.error('Error fetching settings:', error);
         } else {
-          setSettings(data || {
+          const fetchedSettings = data || {
             id: 1,
             whatsapp_number: '51976791234',
             facebook_url: '',
             instagram_url: '',
             tiktok_url: '',
             logo_url: '',
+            yape_qr_url: '',
             footer_text: 'Fortisol Perú - Calidad y Confianza'
-          });
+          };
+          
+          // Ensure yape_qr_url exists even if column is missing in DB
+          if (fetchedSettings && fetchedSettings.yape_qr_url === undefined) {
+            fetchedSettings.yape_qr_url = '';
+          }
+          
+          setSettings(fetchedSettings);
         }
         return;
       }
@@ -313,15 +321,26 @@ export function Admin() {
     setLoading(true);
 
     if (activeTab === 'settings') {
+      console.log('Guardando configuración:', settings);
       const { error } = await supabase
         .from('settings')
-        .upsert(settings);
+        .upsert({
+          id: 1,
+          whatsapp_number: settings.whatsapp_number,
+          facebook_url: settings.facebook_url,
+          instagram_url: settings.instagram_url,
+          tiktok_url: settings.tiktok_url,
+          logo_url: settings.logo_url,
+          yape_qr_url: settings.yape_qr_url,
+          footer_text: settings.footer_text
+        });
 
       if (error) {
+        console.error('Error Supabase Settings:', error);
         alert('Error al guardar configuración: ' + error.message);
       } else {
         alert('Configuración guardada correctamente');
-        fetchData();
+        await fetchData();
       }
       setLoading(false);
       return;
