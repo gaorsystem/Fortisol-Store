@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guía de Migración Supabase VPS - Fortisol</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .step-card { transition: transform 0.2s; }
+        .step-card:hover { transform: translateY(-4px); }
+        code { background: #f1f5f9; padding: 2px 4px; border-radius: 4px; font-weight: bold; }
+        pre { background: #1e293b; color: #f8fafc; padding: 20px; border-radius: 12px; overflow-x: auto; border: 2px solid #000; box-shadow: 4px 4px 0px 0px rgba(0,0,0,1); }
+        .copy-btn { cursor: pointer; transition: all 0.2s; }
+        .copy-btn:active { transform: scale(0.95); }
+    </style>
+</head>
+<body class="p-4 md:p-10">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <div class="inline-flex items-center justify-center w-20 h-20 bg-yellow-400 rounded-3xl border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+            </div>
+            <h1 class="text-4xl font-black uppercase tracking-tighter text-black mb-2">Guía de Migración</h1>
+            <p class="text-gray-500 font-bold uppercase tracking-widest text-sm">Supabase VPS Self-Hosted (Mariasuite)</p>
+        </div>
+
+        <div class="space-y-8">
+            <!-- Paso 1 -->
+            <div id="step-1" class="step-card bg-white border-2 border-black p-8 rounded-[32px] shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                <div class="flex items-center gap-4 mb-6">
+                    <span class="flex items-center justify-center w-10 h-10 bg-black text-white rounded-full font-black text-xl">1</span>
+                    <h2 class="text-2xl font-black uppercase italic">Configurar Esquema "fortisol"</h2>
+                </div>
+                <p class="text-gray-600 mb-6 font-medium leading-relaxed">
+                    Copia y pega este código en el <strong>SQL Editor</strong> de tu Supabase VPS. Esto creará el esquema <code>fortisol</code> y todas las tablas dentro de él.
+                </p>
+                <div class="relative group">
+                    <pre id="sqlCode">
+-- Crear esquema personalizado
+CREATE SCHEMA IF NOT EXISTS fortisol;
+
+-- Cambiar al esquema para que las tablas se creen allí
+SET search_path TO fortisol;
+
+-- Habilitar extensión para IDs automáticos si no está
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- Crear tablas principales
+CREATE TABLE IF NOT EXISTS settings (
+    id BIGINT PRIMARY KEY,
+    whatsapp_number TEXT,
+    facebook_url TEXT,
+    instagram_url TEXT,
+    tiktok_url TEXT,
+    logo_url TEXT,
+    yape_qr_url TEXT,
+    yape_owner TEXT DEFAULT 'Fortisol Perú SAC',
+    yape_phone TEXT DEFAULT '976 791 234',
+    footer_text TEXT
+);
+
+CREATE TABLE IF NOT EXISTS products (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    price FLOAT8 DEFAULT 0,
+    description TEXT,
+    category TEXT,
+    image_url TEXT,
+    is_featured BOOLEAN DEFAULT false,
+    badge_text TEXT,
+    featured_order INT4,
+    benefits JSONB,
+    variants JSONB,
+    ingredients TEXT,
+    stock INT4 DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS slides (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    image_url TEXT,
+    title TEXT,
+    description TEXT,
+    is_active BOOLEAN DEFAULT true,
+    "order" INT4,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS offers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT,
+    subtitle TEXT,
+    image_url TEXT,
+    is_active BOOLEAN DEFAULT true,
+    show_in_popup BOOLEAN DEFAULT false,
+    product_id UUID REFERENCES products(id),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS customers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT,
+    phone TEXT,
+    dni TEXT,
+    address TEXT,
+    district TEXT,
+    province TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS orders (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    order_number BIGSERIAL,
+    order_custom_id TEXT,
+    source TEXT,
+    customer_name TEXT,
+    customer_phone TEXT,
+    customer_dni TEXT,
+    customer_address TEXT,
+    district TEXT,
+    province TEXT,
+    department TEXT,
+    reference TEXT,
+    shipping_method TEXT,
+    payment_method TEXT,
+    total FLOAT8,
+    status TEXT DEFAULT 'pending',
+    items JSONB,
+    admin_notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Insertar configuración inicial
+INSERT INTO settings (id, whatsapp_number, yape_owner, yape_phone, footer_text)
+VALUES (1, '51976791234', 'Fortisol Perú SAC', '976 791 234', 'Fortisol Perú - Calidad y Confianza')
+ON CONFLICT (id) DO NOTHING;
+                    </pre>
+                </div>
+            </div>
+
+            <!-- Paso 2 -->
+            <div id="step-2" class="step-card bg-white border-2 border-black p-8 rounded-[32px] shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                <div class="flex items-center gap-4 mb-6">
+                    <span class="flex items-center justify-center w-10 h-10 bg-black text-white rounded-full font-black text-xl">2</span>
+                    <h2 class="text-2xl font-black uppercase italic">Setup de Storage</h2>
+                </div>
+                <div class="space-y-4">
+                    <p class="text-gray-600 font-medium">Debes crear el bucket de archivos para que funcionen las fotos:</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="p-4 bg-yellow-50 border-2 border-black rounded-2xl">
+                            <h3 class="font-black text-xs uppercase mb-2">Nombre del Bucket</h3>
+                            <p class="font-mono text-lg font-bold">fortisol-assets</p>
+                        </div>
+                        <div class="p-4 bg-green-50 border-2 border-black rounded-2xl">
+                            <h3 class="font-black text-xs uppercase mb-2">Privacidad</h3>
+                            <p class="font-mono text-lg font-bold">PUBLIC (Público)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Paso 3 -->
+            <div id="step-3" class="step-card bg-white border-2 border-black p-8 rounded-[32px] shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                <div class="flex items-center gap-4 mb-6">
+                    <span class="flex items-center justify-center w-10 h-10 bg-black text-white rounded-full font-black text-xl">3</span>
+                    <h2 class="text-2xl font-black uppercase italic">Modificar Código del Cliente</h2>
+                </div>
+                <p class="text-gray-600 mb-4 font-medium">Para que el sistema sepa que debe buscar en el esquema <code>fortisol</code> en vez de <code>public</code>, yo modificaré el archivo <code>src/lib/supabase.ts</code> así:</p>
+                <pre>
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  db: {
+    schema: 'fortisol'
+  }
+});
+                </pre>
+            </div>
+
+            <!-- Paso 4 -->
+            <div id="step-4" class="step-card bg-white border-2 border-black p-8 rounded-[32px] shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                <div class="flex items-center gap-4 mb-6">
+                    <span class="flex items-center justify-center w-10 h-10 bg-black text-white rounded-full font-black text-xl">4</span>
+                    <h2 class="text-2xl font-black uppercase italic">¡Plan de Acción Maestro!</h2>
+                </div>
+                <p class="text-gray-600 mb-6 font-medium">Como el Supabase viejo está bloqueado, haremos esto:</p>
+                <div class="space-y-4">
+                    <div class="p-6 bg-green-50 border-2 border-green-200 rounded-2xl">
+                        <ol class="list-decimal ml-5 space-y-3 font-bold text-green-900">
+                            <li>Conecta esta app a tu VPS (cambia las variables en el menú Settings de la izquierda).</li>
+                            <li>Entra al panel <code class="bg-white px-2 py-1 rounded">/admin</code> de esta web.</li>
+                            <li>Empieza a crear los productos y subir las fotos desde el formulario.</li>
+                            <li>La app se encargará de crear todo en el esquema <code>fortisol</code> y subir los archivos a MariaSuite automáticamente.</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Paso 5 -->
+            <div id="step-5" class="step-card bg-white border-2 border-black p-8 rounded-[32px] shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                <div class="flex items-center gap-4 mb-6">
+                    <span class="flex items-center justify-center w-10 h-10 bg-black text-white rounded-full font-black text-xl">5</span>
+                    <h2 class="text-2xl font-black uppercase italic">Configuración en Vercel</h2>
+                </div>
+                <p class="text-gray-600 mb-4 font-medium">Como tu web está en Vercel, debes hacer esto para que los cambios se vean en internet:</p>
+                <div class="space-y-4">
+                    <div class="p-5 bg-blue-50 border-2 border-blue-200 rounded-2xl">
+                        <ol class="list-decimal ml-5 space-y-3 font-bold text-blue-900">
+                            <li>Entra a tu dashboard de <strong>Vercel</strong>.</li>
+                            <li>Ve a la pestaña <strong>Settings -> Environment Variables</strong>.</li>
+                            <li>Edita <code>VITE_SUPABASE_URL</code> con tu nueva URL de MariaSuite.</li>
+                            <li>Edita <code>VITE_SUPABASE_ANON_KEY</code> con tu nueva ANON KEY.</li>
+                            <li>Haz un <strong>Redeploy</strong> de tu rama de producción para que tome los cambios.</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botón Final -->
+            <div class="pt-8 text-center">
+                <button onclick="window.close()" class="bg-black text-white px-10 py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-gray-800 transition-all shadow-[8px_8px_0px_0px_rgba(251,191,36,1)] active:scale-95">
+                    Entendido, Procederé con el Setup
+                </button>
+            </div>
+        </div>
+
+        <p class="text-center mt-20 text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+            Guía Generada por SolAI para Fortisol Perú &copy; 2024
+        </p>
+    </div>
+</body>
+</html>
