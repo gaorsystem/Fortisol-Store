@@ -47,7 +47,9 @@ CREATE SCHEMA IF NOT EXISTS fortisol;
 -- Cambiar al esquema para que las tablas se creen allí
 SET search_path TO fortisol;
 
--- Permisos necesarios para que Supabase pueda leer el esquema
+-- ==========================================
+-- 1. PERMISOS DE ESQUEMA Y TABLAS
+-- ==========================================
 GRANT USAGE ON SCHEMA fortisol TO anon;
 GRANT USAGE ON SCHEMA fortisol TO authenticated;
 GRANT USAGE ON SCHEMA fortisol TO service_role;
@@ -60,15 +62,49 @@ GRANT ALL ON ALL SEQUENCES IN SCHEMA fortisol TO anon;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA fortisol TO authenticated;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA fortisol TO service_role;
 
--- Dar estos mismos permisos al esquema para futuras tablas
 ALTER DEFAULT PRIVILEGES IN SCHEMA fortisol GRANT ALL ON TABLES TO anon;
 ALTER DEFAULT PRIVILEGES IN SCHEMA fortisol GRANT ALL ON TABLES TO authenticated;
 ALTER DEFAULT PRIVILEGES IN SCHEMA fortisol GRANT ALL ON TABLES TO service_role;
 
--- Habilitar extensión para IDs automáticos si no está
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+-- Permitir que las roles puedan usar el esquema de storage
+GRANT USAGE ON SCHEMA storage TO anon;
+GRANT USAGE ON SCHEMA storage TO authenticated;
+GRANT USAGE ON SCHEMA storage TO service_role;
 
--- Crear tablas principales
+GRANT ALL ON ALL TABLES IN SCHEMA storage TO anon;
+GRANT ALL ON ALL TABLES IN SCHEMA storage TO authenticated;
+GRANT ALL ON ALL TABLES IN SCHEMA storage TO service_role;
+
+-- Dar permisos específicos a la tabla de objetos de storage
+GRANT ALL ON storage.objects TO anon;
+GRANT ALL ON storage.objects TO authenticated;
+GRANT ALL ON storage.objects TO service_role;
+
+GRANT ALL ON storage.buckets TO anon;
+GRANT ALL ON storage.buckets TO authenticated;
+GRANT ALL ON storage.buckets TO service_role;
+
+-- ==========================================
+-- 2. POLÍTICAS DE STORAGE (PARA LAS FOTOS)
+-- ==========================================
+-- Estas políticas permiten que cualquier usuario pueda subir y ver fotos en el bucket 'fortisol-assets'
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('fortisol-assets', 'fortisol-assets', true)
+ON CONFLICT (id) DO NOTHING;
+
+DROP POLICY IF EXISTS "Permitir Subida" ON storage.objects;
+DROP POLICY IF EXISTS "Permitir Lectura" ON storage.objects;
+DROP POLICY IF EXISTS "Permitir Borrado" ON storage.objects;
+DROP POLICY IF EXISTS "Permitir Update" ON storage.objects;
+
+CREATE POLICY "Permitir Subida" ON storage.objects FOR INSERT TO anon, authenticated WITH CHECK (bucket_id = 'fortisol-assets');
+CREATE POLICY "Permitir Lectura" ON storage.objects FOR SELECT TO anon, authenticated USING (bucket_id = 'fortisol-assets');
+CREATE POLICY "Permitir Borrado" ON storage.objects FOR DELETE TO anon, authenticated USING (bucket_id = 'fortisol-assets');
+CREATE POLICY "Permitir Update" ON storage.objects FOR UPDATE TO anon, authenticated USING (bucket_id = 'fortisol-assets');
+
+-- ==========================================
+-- 3. CREACIÓN DE TABLAS
+-- ==========================================
 CREATE TABLE IF NOT EXISTS settings (
     id BIGINT PRIMARY KEY,
     whatsapp_number TEXT,
@@ -152,6 +188,16 @@ CREATE TABLE IF NOT EXISTS orders (
     admin_notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- ==========================================
+-- 4. DESACTIVAR RLS (IMPORTANTE)
+-- ==========================================
+ALTER TABLE settings DISABLE ROW LEVEL SECURITY;
+ALTER TABLE products DISABLE ROW LEVEL SECURITY;
+ALTER TABLE slides DISABLE ROW LEVEL SECURITY;
+ALTER TABLE offers DISABLE ROW LEVEL SECURITY;
+ALTER TABLE customers DISABLE ROW LEVEL SECURITY;
+ALTER TABLE orders DISABLE ROW LEVEL SECURITY;
 
 -- Insertar configuración inicial
 INSERT INTO settings (id, whatsapp_number, yape_owner, yape_phone, footer_text)

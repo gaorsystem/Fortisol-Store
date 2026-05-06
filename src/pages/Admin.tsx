@@ -362,6 +362,10 @@ export function Admin() {
     }
 
     const itemToSave = { ...editingItem };
+    if (!itemToSave.id || itemToSave.id === '') {
+      delete itemToSave.id;
+    }
+
     if (activeTab === 'products') {
       itemToSave.price = parseFloat(itemToSave.price as any) || 0;
       
@@ -431,8 +435,8 @@ export function Admin() {
       .upsert(itemToSave);
 
     if (error) {
-      console.error('Error al guardar:', error);
-      alert('Error al guardar: ' + (error.message || JSON.stringify(error)));
+      console.error('Error detallado de base de datos:', error);
+      alert('Error de Base de Datos: ' + (error.message || JSON.stringify(error)));
     } else {
       setEditingItem(null);
       setIsAdding(false);
