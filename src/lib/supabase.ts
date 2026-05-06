@@ -7,6 +7,7 @@ if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KE
   console.warn('Supabase environment variables are missing. Using provided fallback credentials for preview.');
 }
 
+console.log('Supabase Client Initialized with schema: fortisol');
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   db: {
     schema: 'fortisol'

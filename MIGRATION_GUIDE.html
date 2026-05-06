@@ -47,6 +47,24 @@ CREATE SCHEMA IF NOT EXISTS fortisol;
 -- Cambiar al esquema para que las tablas se creen allí
 SET search_path TO fortisol;
 
+-- Permisos necesarios para que Supabase pueda leer el esquema
+GRANT USAGE ON SCHEMA fortisol TO anon;
+GRANT USAGE ON SCHEMA fortisol TO authenticated;
+GRANT USAGE ON SCHEMA fortisol TO service_role;
+
+GRANT ALL ON ALL TABLES IN SCHEMA fortisol TO anon;
+GRANT ALL ON ALL TABLES IN SCHEMA fortisol TO authenticated;
+GRANT ALL ON ALL TABLES IN SCHEMA fortisol TO service_role;
+
+GRANT ALL ON ALL SEQUENCES IN SCHEMA fortisol TO anon;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA fortisol TO authenticated;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA fortisol TO service_role;
+
+-- Dar estos mismos permisos al esquema para futuras tablas
+ALTER DEFAULT PRIVILEGES IN SCHEMA fortisol GRANT ALL ON TABLES TO anon;
+ALTER DEFAULT PRIVILEGES IN SCHEMA fortisol GRANT ALL ON TABLES TO authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA fortisol GRANT ALL ON TABLES TO service_role;
+
 -- Habilitar extensión para IDs automáticos si no está
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
