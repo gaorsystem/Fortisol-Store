@@ -50,21 +50,33 @@ SET search_path TO fortisol;
 -- ==========================================
 -- 1. PERMISOS DE ESQUEMA Y TABLAS
 -- ==========================================
+-- IMPORTANTE: Si usas Supabase Autohospedado (Portainer/Docker), 
+-- debes añadir 'fortisol' a la variable PGRST_DB_SCHEMAS en tu archivo .env
+-- Ejemplo: PGRST_DB_SCHEMAS=public,storage,fortisol
+
 GRANT USAGE ON SCHEMA fortisol TO anon;
 GRANT USAGE ON SCHEMA fortisol TO authenticated;
+GRANT USAGE ON SCHEMA fortisol TO postgres;
 GRANT USAGE ON SCHEMA fortisol TO service_role;
 
 GRANT ALL ON ALL TABLES IN SCHEMA fortisol TO anon;
 GRANT ALL ON ALL TABLES IN SCHEMA fortisol TO authenticated;
+GRANT ALL ON ALL TABLES IN SCHEMA fortisol TO postgres;
 GRANT ALL ON ALL TABLES IN SCHEMA fortisol TO service_role;
 
 GRANT ALL ON ALL SEQUENCES IN SCHEMA fortisol TO anon;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA fortisol TO authenticated;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA fortisol TO postgres;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA fortisol TO service_role;
 
 ALTER DEFAULT PRIVILEGES IN SCHEMA fortisol GRANT ALL ON TABLES TO anon;
 ALTER DEFAULT PRIVILEGES IN SCHEMA fortisol GRANT ALL ON TABLES TO authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA fortisol GRANT ALL ON TABLES TO postgres;
 ALTER DEFAULT PRIVILEGES IN SCHEMA fortisol GRANT ALL ON TABLES TO service_role;
+
+-- Permitir que el rol authenticator (el que usa PostgREST) vea el esquema
+-- Esto suele ser necesario en instalaciones personalizadas
+GRANT USAGE ON SCHEMA fortisol TO authenticator;
 
 -- Permitir que las roles puedan usar el esquema de storage
 GRANT USAGE ON SCHEMA storage TO anon;
