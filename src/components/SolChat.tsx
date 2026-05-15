@@ -334,7 +334,28 @@ export default function SolChat({ onNavigate }: SolChatProps) {
     sendToGemini(text, `${opt.emoji} ${opt.label}`);
   };
 
-  const handleOptionSelect = (opt: OptionCard) => {
+  const handleOptionSelect = async (opt: OptionCard) => {
+    // Save as lead to Supabase so it appears in Admin
+    try {
+      await supabase.from('orders').insert({
+        customer_name: 'Interesado desde Chat',
+        customer_phone: 'Pendiente',
+        source: 'asistente_sol',
+        order_custom_id: `WSP-${Math.floor(Math.random() * 9000 + 1000)}`,
+        items: [{ 
+          name: opt.title, 
+          price: parseFloat(opt.price.replace(/[^\d.]/g, '')), 
+          quantity: 1,
+          variantName: opt.badge
+        }],
+        total: parseFloat(opt.price.replace(/[^\d.]/g, '')),
+        status: 'pending',
+        admin_notes: `Interés detectado en el chat por: ${opt.title} (${opt.price})`
+      });
+    } catch (err) {
+      console.error('Error saving lead from chat:', err);
+    }
+
     sendToGemini(
       `Quiero el ${opt.id}: ${opt.title} al precio ${opt.price}`,
       `${opt.title} – ${opt.price}`

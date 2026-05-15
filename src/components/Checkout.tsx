@@ -26,6 +26,7 @@ export function Checkout({ items, onBack, onSuccess }: CheckoutProps) {
     district: '',
     address: '',
     reference: '',
+    train_station: '',
     payment_method_choice: 'pay_now', // 'pay_now' or 'pay_later'
     operation_number: '',
   });
@@ -116,7 +117,8 @@ export function Checkout({ items, onBack, onSuccess }: CheckoutProps) {
           items: items,
           order_custom_id: orderId,
           customer_dni: formData.dni,
-          shipping_method: isLimaLima ? 'delivery' : 'shalom',
+          shipping_method: isLimaLima ? 'train_station' : 'shalom',
+          train_station: isLimaLima ? formData.train_station : null,
           source: 'web_store',
           payment_method: formData.payment_method_choice === 'pay_now' ? 'Directo (App)' : 'WhatsApp',
           admin_notes: formData.operation_number ? `Cód. Operación: ${formData.operation_number}` : ''
@@ -130,7 +132,7 @@ export function Checkout({ items, onBack, onSuccess }: CheckoutProps) {
     
     let shippingDetails = "";
     if (isLimaLima) {
-      shippingDetails = `📍 *Dirección:* ${formData.address}${formData.reference ? `, Ref: ${formData.reference}` : ''}\n🏙️ *Ubicación:* ${formData.district}, ${formData.province}, ${formData.department}\n🚚 *Tipo:* Delivery a domicilio`;
+      shippingDetails = `📍 *Estación de Tren:* ${formData.train_station}\n🏙️ *Ubicación:* ${formData.province}, ${formData.department}\n🚚 *Tipo:* Entrega en Estación`;
     } else {
       shippingDetails = `🏙️ *Ubicación:* ${formData.district}, ${formData.province}, ${formData.department}\n🚚 *Tipo:* Courier Shalom (Recojo en Agencia)\n_Nota: Se enviará a la agencia Shalom más cercana a su localidad._`;
     }
@@ -281,18 +283,32 @@ export function Checkout({ items, onBack, onSuccess }: CheckoutProps) {
                         </select>
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Distrito *</label>
-                        <select 
-                          required
-                          name="district"
-                          value={formData.district}
-                          onChange={handleInputChange}
-                          disabled={!formData.province}
-                          className="w-full border border-gray-200 p-3 focus:border-black outline-none transition-colors bg-white disabled:bg-gray-50"
-                        >
-                          <option value="">Seleccionar</option>
-                          {districts.map(d => <option key={d} value={d}>{d}</option>)}
-                        </select>
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                          {isLimaLima ? 'Estación de Tren *' : 'Distrito *'}
+                        </label>
+                        {isLimaLima ? (
+                          <input 
+                            required
+                            type="text"
+                            name="train_station"
+                            value={formData.train_station}
+                            onChange={handleInputChange}
+                            className="w-full border border-gray-200 p-3 focus:border-black outline-none transition-colors"
+                            placeholder="Ej. Estación Arriola"
+                          />
+                        ) : (
+                          <select 
+                            required
+                            name="district"
+                            value={formData.district}
+                            onChange={handleInputChange}
+                            disabled={!formData.province}
+                            className="w-full border border-gray-200 p-3 focus:border-black outline-none transition-colors bg-white disabled:bg-gray-50"
+                          >
+                            <option value="">Seleccionar</option>
+                            {districts.map(d => <option key={d} value={d}>{d}</option>)}
+                          </select>
+                        )}
                       </div>
                     </div>
 
@@ -301,11 +317,11 @@ export function Checkout({ items, onBack, onSuccess }: CheckoutProps) {
                         <Truck className="w-5 h-5 text-black flex-shrink-0 mt-0.5" />
                         <div>
                           <p className="text-sm font-bold uppercase tracking-tight">
-                            {isLimaLima ? "Delivery a Domicilio (Lima Metropolitana)" : "Envío a Provincia vía Shalom"}
+                            {isLimaLima ? "Entrega en Estación del Tren (Lima)" : "Envío a Provincia vía Shalom"}
                           </p>
                           <p className="text-xs text-gray-500 mt-1">
                             {isLimaLima 
-                              ? "Tu pedido será entregado directamente en tu dirección." 
+                              ? "Selecciona la estación donde recogerás tu pedido." 
                               : "Tu pedido será enviado a la agencia Shalom de tu localidad para recojo personal."}
                           </p>
                         </div>
@@ -315,27 +331,30 @@ export function Checkout({ items, onBack, onSuccess }: CheckoutProps) {
                     {isLimaLima ? (
                       <div className="space-y-4">
                         <div className="space-y-1">
-                          <label className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Dirección Exacta *</label>
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-gray-500">DNI del Receptor *</label>
                           <input 
                             required
                             type="text"
-                            name="address"
-                            value={formData.address}
-                            onChange={handleInputChange}
-                            className="w-full border border-gray-200 p-3 focus:border-black outline-none transition-colors"
-                            placeholder="Av. Principal 123"
+                            name="dni"
+                            value={formData.dni}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/\D/g, '');
+                              if (val.length <= 8) {
+                                setFormData({...formData, dni: val});
+                              }
+                            }}
+                            className={`w-full border p-3 outline-none transition-colors ${formData.dni.length === 8 ? 'border-green-500 focus:border-green-600' : 'border-gray-200 focus:border-black'}`}
+                            placeholder="12345678"
                           />
+                          {formData.dni && formData.dni.length !== 8 && (
+                            <p className="text-[9px] text-red-500 font-bold uppercase">Debe tener 8 dígitos</p>
+                          )}
                         </div>
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Referencia (Opcional)</label>
-                          <input 
-                            type="text"
-                            name="reference"
-                            value={formData.reference}
-                            onChange={handleInputChange}
-                            className="w-full border border-gray-200 p-3 focus:border-black outline-none transition-colors"
-                            placeholder="Frente al parque, portón negro..."
-                          />
+                        <div className="bg-yellow-50 p-4 border border-yellow-100 flex items-start gap-3">
+                          <Info className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                          <p className="text-xs text-yellow-800 leading-relaxed">
+                            <strong>Nota:</strong> Solo entregamos en estaciones del tren. No contamos con delivery a domicilio por el momento en Lima Metropolitana.
+                          </p>
                         </div>
                       </div>
                     ) : formData.department ? (
@@ -380,7 +399,7 @@ export function Checkout({ items, onBack, onSuccess }: CheckoutProps) {
                       <button 
                         type="button"
                         onClick={() => setStep(3)}
-                        disabled={!formData.department || !formData.province || !formData.district || (isLimaLima ? !formData.address : formData.dni.length !== 8)}
+                        disabled={!formData.department || !formData.province || (isLimaLima ? (!formData.train_station || formData.dni.length !== 8) : (!formData.district || formData.dni.length !== 8))}
                         className="flex-1 bg-black text-white py-4 font-bold uppercase tracking-widest hover:bg-gray-900 transition-colors disabled:bg-gray-300"
                       >
                         Resumen Final
@@ -489,7 +508,7 @@ export function Checkout({ items, onBack, onSuccess }: CheckoutProps) {
                             <p className="text-gray-600">{formData.phone}</p>
                             <p className="text-gray-600 mt-2">
                               {isLimaLima 
-                                ? `${formData.address}, ${formData.district}, ${formData.province}`
+                                ? `Estación: ${formData.train_station}, ${formData.province}`
                                 : `Envío Shalom: ${formData.district}, ${formData.province}, ${formData.department}`}
                             </p>
                           </div>

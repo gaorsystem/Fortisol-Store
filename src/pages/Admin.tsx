@@ -408,7 +408,7 @@ export function Admin() {
       const essentialFields = [
         'id', 'order_number', 'order_custom_id', 'source', 'customer_name', 'customer_phone', 'customer_dni', 
         'customer_address', 'district', 'province', 'department', 'reference',
-        'shipping_method', 'payment_method', 'total', 'status', 'items', 'created_at', 'admin_notes'
+        'shipping_method', 'payment_method', 'total', 'status', 'items', 'created_at', 'admin_notes', 'train_station'
       ];
       
       Object.keys(itemToSave).forEach(key => {
@@ -991,9 +991,11 @@ export function Admin() {
                             <td className="px-6 py-4">
                               <div className="flex flex-col">
                                 <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded self-start ${item.shipping_method === 'shalom' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
-                                  {item.shipping_method === 'shalom' ? 'Shalom' : 'Lima Delivery'}
+                                  {item.shipping_method === 'shalom' ? 'Shalom' : 'Estación Tren'}
                                 </span>
-                                <span className="text-[10px] text-gray-500 mt-1 font-bold">{item.district}, {item.province}</span>
+                                <span className="text-[10px] text-gray-500 mt-1 font-bold">
+                                  {item.shipping_method === 'shalom' ? `${item.district}, ${item.province}` : (item.train_station || 'Estación no reg.')}
+                                </span>
                               </div>
                             </td>
                             <td className="px-6 py-4">
@@ -1129,9 +1131,11 @@ export function Admin() {
                             )}
                             <div className="flex flex-wrap gap-2">
                               <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${item.shipping_method === 'shalom' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
-                                {item.shipping_method === 'shalom' ? 'Shalom' : 'Lima'}
+                                {item.shipping_method === 'shalom' ? 'Shalom' : 'Estación Tren'}
                               </span>
-                              <span className="text-[9px] font-bold text-gray-500">{item.district}</span>
+                              <span className="text-[9px] font-bold text-gray-500">
+                                {item.shipping_method === 'shalom' ? item.district : (item.train_station || 'Estación no reg.')}
+                              </span>
                             </div>
                             <div className="flex items-center gap-2">
                               {getStatusIcon(item.status)}
@@ -1795,20 +1799,27 @@ export function Admin() {
                           onChange={e => setEditingItem({...editingItem, shipping_method: e.target.value})}
                           className="w-full px-4 py-2 rounded-xl border-2 border-gray-100 focus:border-black outline-none transition-all font-bold text-sm bg-white"
                         >
-                          <option value="delivery">Delivery (Lima)</option>
+                          <option value="delivery">Estación del Tren (Lima)</option>
                           <option value="shalom">Shalom (Provincia)</option>
                         </select>
                       </div>
                     </div>
 
                     <div className="pt-2 border-t border-gray-200/50">
-                      <div className="text-[10px] text-gray-500 uppercase font-bold">Dirección de Entrega / Agencia</div>
+                      <div className="text-[10px] text-gray-500 uppercase font-bold">
+                        {editingItem?.shipping_method === 'shalom' ? 'Agencia Shalom' : 'Estación del Tren / Punto de Entrega'}
+                      </div>
                       <div className="space-y-4">
                         <div className="space-y-1">
                           <input 
                             type="text" 
-                            value={editingItem?.customer_address || ''} 
-                            onChange={e => setEditingItem({...editingItem, customer_address: e.target.value})}
+                            placeholder={editingItem?.shipping_method === 'shalom' ? 'Ej: Agencia Central Shalom' : 'Ej: Estación Arriola'}
+                            value={editingItem?.train_station || editingItem?.shipping_agency || editingItem?.customer_address || ''} 
+                            onChange={e => setEditingItem({
+                              ...editingItem, 
+                              train_station: e.target.value,
+                              customer_address: e.target.value // Backup
+                            })}
                             className="w-full px-4 py-2 rounded-xl border-2 border-gray-100 focus:border-black outline-none transition-all font-bold text-sm"
                           />
                         </div>
